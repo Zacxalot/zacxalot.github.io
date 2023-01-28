@@ -33,9 +33,10 @@ fieldset {
 pre {
   padding: 2rem;
   margin: 1.75rem 0;
-  background-color: #fff;
+  background-color: #0d0d0d !important;
   border: 1px solid #ccc;
-  overflow: auto
+  overflow: auto;
+  border-radius: 5px;
 }
 
 code[class*=language-],
@@ -362,14 +363,12 @@ a:hover {
 }
 
 .hack code {
-  font-weight: 700
+  font-weight: 700;
+  background-color: #0d0d0d;
+  padding: 0.3rem;
+  border-radius: 0.4rem;
 }
 
-.hack code:after,
-.hack code:before {
-  content: "`";
-  display: inline
-}
 
 .hack hr {
   position: relative;
@@ -977,7 +976,7 @@ select.form-control {
 
 .dark code,
 .dark strong {
-  color: #fff
+  color: #6051AE;
 }
 
 .dark code {
