@@ -5,7 +5,7 @@ transparent = true
 
 [taxonomies]
 categories = ["Flat-Blend"]
-tags = ["rust","graphics"]
+tags = ["rust","bmesh","blender"]
 +++
 
 At the moment, we're generating vertices using the [Lyon](https://lib.rs/crates/lyon) crate and sticking them right into a vertex buffer for Vulkan to use.
