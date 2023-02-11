@@ -8,14 +8,16 @@ categories = ["Express"]
 tags = ["rust","express","step","bad file formats"]
 +++
 
+<script type="module" src="https://unpkg.com/@google/model-viewer/dist/model-viewer.min.js"></script>
+
 This is a bit different from the stuff I've been posting about so far.
 By "a bit different" I mean this isn't about Blender, but it is still about 3D data structures involving Rust, so that "bit" really is just a "bit".
 
-At work, we deal with lots of CAD data in [STEP](https://en.wikipedia.org/wiki/ISO_10303-21) format. These STEP files contain all of the data needed to define 3D parts. On top of this, they hold definitions for assemblys and, depending on the version of the format you have, can also include information regarding the colour of parts (which is particularly interesting to the company). Painfully though, it still seems like a lot of information, such as part materials, that is availabe in native CAD data, is lost when converted into STEP. Everything that STEP is capable of is laid out in [ISO standard 10303](https://www.iso.org/standard/84667.html), but I'm not abouts to spend 145 of my hard earned Swiss Francs on something I can enjoy guessing about, so that's why I'm here.
+At work, we deal with lots of CAD data in [STEP](https://en.wikipedia.org/wiki/ISO_10303-21) format. These STEP files contain all the data needed to define 3D parts. On top of this, they hold definitions for assemblies  and, depending on the version of the format you have, can also include information regarding the colour of parts (which is particularly interesting to the company). Painfully though, it still seems like a lot of information, such as part materials, that is available in native CAD data, is lost when converted into STEP. Everything that STEP is capable of is laid out in [ISO standard 10303](https://www.iso.org/standard/84667.html), but I'm not abouts to spend 145 of my hard-earned Swiss Francs on something I can enjoy guessing about, so that's why I'm here.
 
 ## Chronic Step Pain
 
-When I think of a CAD file, I imagine a super dense binary file with high precision parameters defining the placement of each edge, face, curve and corner. For the most part, this is an accurate assumption. FreeCAD for example stores it's data like this, just a big old heap of bits. This is great, humans don't need to and definately don't want to read CAD data in it's raw format. By the same merit, humans <i>do</i> want the software they use to interact with their CAD to be able to read the data super quick.
+When I think of a CAD file, I imagine a super dense binary file with high precision parameters defining the placement of each edge, face, curve and corner. For the most part, this is an accurate assumption. FreeCAD for example stores it's data like this, just a big old heap of bits. This is great, humans don't need to and definately don't want to read CAD data in its raw format. By the same merit, humans <i>do</i> want the software they use to interact with their CAD to be able to read the data super quick.
 
 This is where STEP enters the ring. If you open up a STEP file in a text editor, you are met with a nasty surprise. It's all in ASCII. What the hell? Who dreamt this disaster up? Here's an example just in case you didn't believe me or don't have one to hand.
 
@@ -57,17 +59,27 @@ SHAPE_REPRESENTATION_RELATIONSHIP()
 
 As you can see, there's a bunch of metadata at the top, which is perfectly fine, you've got to put that stuff somewhere right. But the pain kicks in when you hit the `DATA` section towards the bottom. This is where all of our shapes, assemblies and colour lies, defined in a semicolon separated list of numbered tags, each with varying numbers of parameters. These lines then reference other lines using `#` symbols making it quite difficult to make your way around as a human with a text editor. This is where my annoyance hits its peak. If you're going to make a file format that's human readable, at least make it readable to the point where it's useful. The sacrafice of not using binary is completely wasted othewise.
 
-In the file I showed a snippet of up there, there's another 3000 lines of "DATA", I don't want to kid you into thinking that STEP is actually super dense after all. In fact, as you probably have guessed, it's terrible at that too! The step file for the model pictured below has a filesize of 254kb, wheras the FreeCAD file (created using the STEP file) is only 59kb.
+In the file I showed a snippet of up there, there's another 3000 lines of "DATA", I don't want to kid you into thinking that STEP is super dense after all. In fact, as you probably have guessed, it's terrible at that too! The step file for the model shown below has a filesize of 254kb, wheras the FreeCAD file (created using the STEP file) is only 59kb.
 
-{{image(src="asm.png", alt="3D render of 2 cad parts assembled together", caption="My CAD skills aren't the best")}}
+<model-viewer 
+    src="asm.glb"
+    environment-image="bank_vault_1k.hdr"
+    ios-src="asm.glb"
+    alt="3D render of 2 cad parts assembled together"
+    rotation-per-second="32"
+    shadow-intensity="1"
+    camera-controls
+    auto-rotate ar
+    style="width:100%;height: 100vh; border-radius:15px;"
+>
 
-The STEP file format is regarded by many as pretty poor as far as I'm aware, just look at [the wikipedia page for its not so gleaming reputation](https://en.wikipedia.org/wiki/ISO_10303-21#Criticism). I'm definately not a fan.
+The STEP file format is regarded by many as poor as far as I'm aware, just look at [the wikipedia page for its not so gleaming reputation](https://en.wikipedia.org/wiki/ISO_10303-21#Criticism). I'm definately not a fan.
 
 ## Doing Bits
 
 I've had my rant now and I feel like a new man, less complaining from now on. So, I've written a very basic parser for the STEP file format, which is based on the [EXPRESS](https://en.wikipedia.org/wiki/EXPRESS_(data_modeling_language)) schema. As I've said earlier, I've not purchased the ISO document that defines STEP, which sets me off to a bad start. I also think it's important to mention that this parser is far from complete. I've got it working with a few STEP files, but I'm sure there's all kinds of funky edge cases I've missed.
 
-For parsing, I've used the [nom](https://crates.io/crates/nom#streaming-formats) library. It's a bit difficult to get your head around at first, but once you get the hang of it it's extremely powerful. This is the function that parses a single line of data. It takes in a `&str` and if the parsing is a success it returns an `Ok` `IResult` containing the rest of the file yet to be parsed as well as a parsed DataLine object. 
+For parsing, I've used the [nom](https://crates.io/crates/nom#streaming-formats) library. It's a bit difficult to get your head around at first, but once you get the hang of it it's extremely powerful. This is the function that parses a single line of data. It takes in a `&str` and if the parsing is a success, it returns an `Ok` `IResult` containing the rest of the file yet to be parsed as well as a parsed DataLine object. 
 
 ``` rust
 #[derive(Debug)]
@@ -101,7 +113,7 @@ pub fn data_line(input: &str) -> IResult<&str, DataLine> {
     Ok((next_line, data_line))
 }
 ```
-You'll notice that on each line that we use a [combinator](https://github.com/rust-bakery/nom/blob/main/doc/choosing_a_combinator.md), we unwrap the result with a `?`. This means if the combinator failed, the error will get bubbled up and depending on how the original function was called nom can handle the result differntly. For example, the combinator that is calling our `data_line` function is a [`many1`](https://docs.rs/nom/latest/nom/multi/fn.many1.html), which will keep running a combinator on the returned remaining data until it returns an error, at which point it will return all of the data it managed to parse as a `Vec`. This is perfect for us as we want to keep parsing lines until we hit something we can't parse as a data line, such as an `ENDSEC;` which breaks up sections in STEP.
+You'll notice that on each line that we use a [combinator](https://github.com/rust-bakery/nom/blob/main/doc/choosing_a_combinator.md), we unwrap the result with a `?`. This means if the combinator failed, the error will get bubbled up and depending on how the original function was called nom can handle the result differently. For example, the combinator that is calling our `data_line` function is a [`many1`](https://docs.rs/nom/latest/nom/multi/fn.many1.html), which will keep running a combinator on the returned remaining data until it returns an error, at which point it will return all the data it managed to parse as a `Vec`. This is perfect for us as we want to keep parsing lines until we hit something we can't parse as a data line, such as an `ENDSEC;` which breaks up sections in STEP.
 
 With this so far we have parsed the `#13=` and the trailing `;` out of this:
 ```
@@ -226,7 +238,7 @@ pub fn string(input: &str) -> IResult<&str, Element> {
 ```
 
 
-And just like that, we're done. Well, we're not done because I'm sure there's plenty of examples of STEP files that wont work with it, but it does work for my step files, so I'm happy for now. The first improvement to make would probably to stick some more `.trim`'s around the place just to take out some whitespace. It would also be nice to have a unit test for each of the combinators which would be quite easy and satisfying to do.
+And just like that, we're done. Well, we're not done because I'm sure there's plenty of examples of STEP files that won't work with it, but it does work for my step files, so I'm happy for now. The first improvement to make would probably to stick some more `.trim`'s around the place just to take out some whitespace. It would also be nice to have a unit test for each of the combinators which would be quite easy and satisfying to do.
 
 ## Serde, JSON and Binary
 
@@ -258,13 +270,13 @@ Because it's easy to, I decided to serialise the resulting data structure into j
     },
     ...
 ```
-Just as bad as STEP, now usable in every programming language you can think of... and 3x the file size 😝. It is however probably a little nicer to work with now that you have all the tools you'd normally have for looking at json at your disposal such as JsonPath. Because of the nature of the data structure, this json is [marshalled](https://en.wikipedia.org/wiki/Marshalling_(computer_science)), in a similar way to how DynamoDB records are, which is a bit awkward. There's probably a way of dealing with this marshalling using serde, I just don't care enough to look into it right now.
+Just as bad as STEP, now usable in every programming language you can think of... and 3x the file size 😝. It is however probably a little nicer to work with now that you have all the tools you'd normally have for looking at json at your disposal such as JsonPath. Because of the nature of the data structure, this json is [marshalled](https://en.wikipedia.org/wiki/Marshalling_(computer_science)), in a similar way to how DynamoDB records are, which is a bit awkward. There's probably a way of dealing with this marshalling using serde, I just don't care enough to investigate it right now.
 
-Also because it's easy to do, I decided to encode and compress the resulting data structure using [`bincode`](https://crates.io/crates/bincode) and [`flate2`](https://crates.io/crates/flate2), and ended up with a file only 44kb big 🥳. I'm not counting this as a win over FreeCAD though, I'm sure that's much more efficient and actually stores way more data that what I'm doing. Still, pretty cool compared to the STEP file's 254kb.
+Also, because it's easy to do, I decided to encode and compress the resulting data structure using [`bincode`](https://crates.io/crates/bincode) and [`flate2`](https://crates.io/crates/flate2), and ended up with a file only 44kb big 🥳. I'm not counting this as a win over FreeCAD though, I'm sure that's much more efficient and stores way more data that what I'm doing. Still, pretty cool compared to the STEP file's 254kb.
 
 ---
 
-I don't know what compelled me to reccomend a song in my last post but I think it's fun so I'm going to carry on with it.
+I don't know what compelled me to reccomend a song in my last post, but I think it's fun, so I'm going to carry on with it.
 
-This is `Caroline Polachek's` remix of `Oh Yeah` by `A.G. Cook`. Probably not for everyone this, but I think it's a really fun song. The original version feels a bit dead after listening to the remix but you can pretend it doesn't exist. Enjoy!
+This is `Caroline Polachek's` remix of `Oh Yeah` by `A.G. Cook`. Probably not for everyone this, but I think it's a really fun song. The original version feels a bit dead after listening to the remix, but you can pretend it doesn't exist. Enjoy!
 {{spotify(src="https://open.spotify.com/embed/track/2tPN4TxN7ZYlSggqU7IENd?utm_source=generator")}}
