@@ -70,7 +70,7 @@ In the file I showed a snippet of up there, there's another 3000 lines of "DATA"
     shadow-intensity="1"
     camera-controls
     auto-rotate ar
-    style="width:100%;height: 100vh; border-radius:15px;"
+    style="width:100%;height: 75vh; border-radius:15px;"
 >
 
 The STEP file format is regarded by many as poor as far as I'm aware, just look at [the wikipedia page for its not so gleaming reputation](https://en.wikipedia.org/wiki/ISO_10303-21#Criticism). I'm definately not a fan.
