@@ -228,3 +228,43 @@ pub fn string(input: &str) -> IResult<&str, Element> {
 
 And just like that, we're done. Well, we're not done because I'm sure there's plenty of examples of STEP files that wont work with it, but it does work for my step files, so I'm happy for now. The first improvement to make would probably to stick some more `.trim`'s around the place just to take out some whitespace. It would also be nice to have a unit test for each of the combinators which would be quite easy and satisfying to do.
 
+## Serde, JSON and Binary
+
+Because it's easy to, I decided to serialise the resulting data structure into json which comes out looking like this:
+``` json
+[
+    {
+        "number": 10,
+        "chunks": [
+            {
+                "tag": "MECHANICAL_DESIGN_GEOMETRIC_PRESENTATION_REPRESENTATION",
+                "elements": [
+                    {
+                        "String": ""
+                    },
+                    {
+                        "Elements": [
+                            {
+                                "Reference": 21
+                            }
+                        ]
+                    },
+                    {
+                        "Reference": 3284
+                    }
+                ]
+            }
+        ]
+    },
+    ...
+```
+Just as bad as STEP, now usable in every programming language you can think of... and 3x the file size 😝. It is however probably a little nicer to work with now that you have all the tools you'd normally have for looking at json at your disposal such as JsonPath. Because of the nature of the data structure, this json is [marshalled](https://en.wikipedia.org/wiki/Marshalling_(computer_science)), in a similar way to how DynamoDB records are, which is a bit awkward. There's probably a way of dealing with this marshalling using serde, I just don't care enough to look into it right now.
+
+Also because it's easy to do, I decided to encode and compress the resulting data structure using [`bincode`](https://crates.io/crates/bincode) and [`flate2`](https://crates.io/crates/flate2), and ended up with a file only 44kb big 🥳. I'm not counting this as a win over FreeCAD though, I'm sure that's much more efficient and actually stores way more data that what I'm doing. Still, pretty cool compared to the STEP file's 254kb.
+
+---
+
+I don't know what compelled me to reccomend a song in my last post but I think it's fun so I'm going to carry on with it.
+
+This is `Caroline Polachek's` remix of `Oh Yeah` by `A.G. Cook`. Probably not for everyone this, but I think it's a really fun song. The original version feels a bit dead after listening to the remix but you can pretend it doesn't exist. Enjoy!
+{{spotify(src="https://open.spotify.com/embed/track/2tPN4TxN7ZYlSggqU7IENd?utm_source=generator")}}
