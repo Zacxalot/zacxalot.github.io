@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+      <meta http-equiv="X-UA-Compatible" content="IE=edge">
+      <meta http-equiv="content-type" content="text/html; charset=utf-8">
+      <meta name="google-site-verification" content="S_D6XT0jzn6m38pioQTiMnY2HFPuJUc3wtdV3CRtBEk" />
+      <script data-goatcounter="https://zacxalot.goatcounter.com/count"
+        async src="//gc.zgo.at/count.js"></script>
+
+      <!-- Enable responsiveness on mobile devices-->
+      <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1">
+
+      <title></title>
+
+      
+        <link rel="alternate" type="application/atom+xml" title="RSS" href="https://zacxalot.github.io/atom.xml">
+      
+
+      
+          <link rel="stylesheet" href="https://zacxalot.github.io/site.css">
+      
+
+      
+      
+    </head>
+
+    <body class="hack dark main container">
+        
+    
+        
+                
+                    <header>
+                        <nav itemscope itemtype="http://schema.org/SiteNavigationElement">
+                        
+                            <a itemprop="url"
+                               class=""
+                               href="https:&#x2F;&#x2F;zacxalot.github.io">
+                                <span itemprop="name">Home</span></a>
+                        
+                            <a itemprop="url"
+                               class=""
+                               href="https:&#x2F;&#x2F;zacxalot.github.io&#x2F;categories">
+                                <span itemprop="name">Categories</span></a>
+                        
+                            <a itemprop="url"
+                               class=""
+                               href="https:&#x2F;&#x2F;zacxalot.github.io&#x2F;tags">
+                                <span itemprop="name">Tags</span></a>
+                        
+                            <a itemprop="url"
+                               class=""
+                               href="https:&#x2F;&#x2F;github.com&#x2F;Zacxalot">
+                                <span itemprop="name">GitHub</span></a>
+                        
+                            <a itemprop="url"
+                               class=""
+                               href="https:&#x2F;&#x2F;www.linkedin.com&#x2F;in&#x2F;s-gregson&#x2F;">
+                                <span itemprop="name">LinkedIn</span></a>
+                        
+                        </nav>
+                    </header>
+                
+            
+    
+
+<article itemscope itemtype="http://schema.org/BlogPosting">
+    <header>
+        <h1 itemprop="headline">Mesh Data Structures?</h1>
+        <span class="muted">
+<svg style="margin-bottom:-3px" class="i-clock" viewBox="0 0 32 32" width="16" height="16" fill="none"
+    stroke="currentcolor" stroke-linecap="round" stroke-linejoin="round" stroke-width="6.25%">
+    <circle cx="16" cy="16" r="14" />
+    <path d="M16 8 L16 16 20 20" />
+</svg>
+<span>5 minute read</span>
+<svg style="margin-bottom: -3px" class="i-edit" viewBox="0 0 32 32" width="16" height="16" fill="none"
+    stroke="currentcolor" stroke-linecap="round" stroke-linejoin="round" stroke-width="6.25%">
+    <path d="M30 7 L25 2 5 22 3 29 10 27 Z M21 6 L26 11 Z M5 22 L10 27 Z" />
+</svg>
+
+Published: 2023-01-29
+</span>
+    </header>
+    <div itemprop="articleBody">
+      <p>At the moment, we're generating vertices using the <a href="https://lib.rs/crates/lyon">Lyon</a> crate and sticking them right into a vertex buffer for Vulkan to use.</p>
+<pre data-lang="rust" style="background-color:#2b303b;color:#c0c5ce;" class="language-rust "><code class="language-rust" data-lang="rust"><span style="color:#b48ead;">let mut</span><span> geometry: VertexBuffers&lt;Point, </span><span style="color:#b48ead;">u16</span><span>&gt; = VertexBuffers::new();
+</span><span style="color:#b48ead;">let mut</span><span> geometry_builder = </span><span style="color:#96b5b4;">simple_builder</span><span>(&amp;</span><span style="color:#b48ead;">mut</span><span> geometry);
+</span><span>
+</span><span style="color:#b48ead;">let</span><span> options = FillOptions::tolerance(</span><span style="color:#d08770;">0.001</span><span>);
+</span><span style="color:#b48ead;">let mut</span><span> tessellator = FillTessellator::new();
+</span><span>
+</span><span style="color:#b48ead;">let mut</span><span> builder = tessellator.</span><span style="color:#96b5b4;">builder</span><span>(&amp;options, &amp;</span><span style="color:#b48ead;">mut</span><span> geometry_builder);
+</span><span>
+</span><span>builder.</span><span style="color:#96b5b4;">add_circle</span><span>([</span><span style="color:#d08770;">0.0</span><span>, </span><span style="color:#d08770;">0.0</span><span>].</span><span style="color:#96b5b4;">into</span><span>(), </span><span style="color:#d08770;">1.0</span><span>, Winding::Positive);
+</span><span>
+</span><span>builder.</span><span style="color:#96b5b4;">build</span><span>().</span><span style="color:#96b5b4;">unwrap</span><span>();
+</span></code></pre>
+<p>The geometry generation is fine, I plan to use Lyon for this purpose for as long as I can. I'm still thinking about it, but I think my problem is how do I store this data for several meshes and how do I edit the vertex data while still keeping track of where faces are.</p>
+<p>In seek of answers, I turned to the Blender development wiki and found <a href="https://wiki.blender.org/wiki/Source/Objects/Mesh">this page</a>, which reveals that Blender uses to methods of structuring mesh data. <code>Mesh</code>, which is how meshes are stored when they're not being modified, and <code>BMesh</code> which is how they're stored when they are being modified. I'm not sure if either of these are relevant for what I'm trying to achieve, or if I need a similarly separated system for static and editable mesh data, so I'm going to look into both and see.</p>
+<h3 id="a-few-hours-maybe-a-day-later">A few hours (maybe a day) later...</h3>
+<p>This is a few hours later and I'm getting there. I've downloaded the source code for Blender and found that there's some wonderful documentation in there that you have to generate with doxygen. Using the docs, I managed to find this:</p>
+<pre data-lang="cpp" style="background-color:#2b303b;color:#c0c5ce;" class="language-cpp "><code class="language-cpp" data-lang="cpp"><span style="color:#b48ead;">typedef struct</span><span> Mesh {
+</span><span>  </span><span style="color:#bf616a;">DNA_DEFINE_CXX_METHODS</span><span>(Mesh)
+</span><span> 
+</span><span>  ID id;
+</span><span>  </span><span style="color:#b48ead;">struct</span><span> AnimData *adt;
+</span><span> 
+</span><span>  </span><span style="color:#b48ead;">struct</span><span> Ipo *ipo DNA_DEPRECATED;
+</span><span>  </span><span style="color:#b48ead;">struct</span><span> Key *key;
+</span><span> 
+</span><span>  </span><span style="color:#b48ead;">struct</span><span> Material **mat;
+</span><span> 
+</span><span>  </span><span style="color:#b48ead;">int</span><span> totvert;
+</span><span>  </span><span style="color:#b48ead;">int</span><span> totedge;
+</span><span>  </span><span style="color:#b48ead;">int</span><span> totpoly;
+</span><span>  </span><span style="color:#b48ead;">int</span><span> totloop;
+</span><span> 
+</span><span>  CustomData vdata, edata, pdata, ldata;
+</span><span>  ...
+</span></code></pre>
+<p>DNA_mesh_types.h</p>
+<p>This is the start of the struct definition for <code>Mesh</code> (there's quite a bit more but I can barely understand it, a lot of it says it is deprecated anyway). So, I think the data of vertex positions, edges and such are stored in the *data properties at the bottom there. They all exist as <code>CustomData</code>. I've had a look in the files for <code>CustomData</code> and I can't for the life of me figure out how it works, it seems to be doing memory management stuff, but I don't know C++ too well. If I were to guess, I'd say <code>vdata</code> stores vertices, <code>e</code> stores edges, <code>p</code> stores polygons and <code>l</code> stores loops.</p>
+<p>I also found the documentation and code for <code>BMesh</code>. There's a lot going on in here that I don't understand too, <code>BMesh</code> seems to store the same <code>CustomData</code> as <code>Mesh</code> but it also has <code>BMVert</code>, <code>BMEdge</code>, <code>BMFace</code> and <code>BMLoop</code>. The documentation explains that faces are made up of &quot;a circular linked list of loops&quot; so I went and found the definition of <code>BMLoop</code> (and trimmed out the documentation for easier reading).</p>
+<pre data-lang="cpp" style="background-color:#2b303b;color:#c0c5ce;" class="language-cpp "><code class="language-cpp" data-lang="cpp"><span style="color:#b48ead;">typedef struct</span><span> BMLoop {
+</span><span>  BMHeader head;
+</span><span>  </span><span style="color:#b48ead;">struct</span><span> BMVert *v;
+</span><span>  </span><span style="color:#b48ead;">struct</span><span> BMEdge *e;
+</span><span>  </span><span style="color:#b48ead;">struct</span><span> BMFace *f;
+</span><span>  </span><span style="color:#b48ead;">struct</span><span> BMLoop *radial_next, *radial_prev;
+</span><span>  </span><span style="color:#b48ead;">struct</span><span> BMLoop *next, *prev;
+</span><span>} BMLoop;
+</span></code></pre>
+<p>bmesh_class.h</p>
+<p>So <code>BMLoop</code> stores several pointers. A pointer to an edge, which exists as part of the face it is making up. A pointer to a vertex, which must be one of the two vertices that make up the edge it references. A pointer to the face that it is a part of. Pointers forwards and backwards in the circle to other loops that make up the face (next &amp; prev). And finally pointers forwards and backwards in the circle that use the same edge. The edge sharing pointers are interesting, feels like it's less obvious why they might be useful compared to the other properties but I'm sure there necessary somewhere.</p>
+<p>Looking at the other struct definitions, there's quite a bit of back and forth referencing going on. For example, <code>BMEdge</code> has pointers to two <code>BMVert</code> pointers (v1 &amp; v2), but it also has a <code>BMLoop</code> pointer. <code>BMVert</code> has a similar thing going on with a pointer <code>BMEdge</code>. </p>
+<p>There's another thing I've missed which is that in a <code>BMEdge</code>, there's two <code>BMDiskLink</code>'s, one for each vertex. This keeps a linked list of edges around a vertex.</p>
+<p>If you are interested in taking a look at the BMesh docs yourself , there's <a href="https://wiki.blender.org/wiki/Source/Modeling/BMesh/Design">this page</a> on the wiki which is pretty handy, although quite confusing when not accompanied by the doxygen docs, which can be generated by running <code>doxygen</code> in <code>\doc\doxygen</code> in the <a href="https://github.com/blender/blender">Blender source</a>. Also, I may have made some false assumptions throughout this because it's quite complicated, if you have any corrections I would love to hear them.</p>
+<h2 id="what-next">What next?</h2>
+<p>There are a few things to think about now:</p>
+<ul>
+<li>Do I need to implement this myself or is there a library that will do what I need</li>
+<li>Is this even what I need, or is it too advanced/3D specific</li>
+<li>How do I implement this in safe Rust, there's a lot of pointer usage going on here and I feel there might be some confusing lifetimes going on in there too</li>
+<li>If I do figure out how to implement the structs in Rust, what operations do I need to implement and how complicated are they?</li>
+</ul>
+<p>I may have not got very far with this here but it was fun having a look around the source, even if I can't understand all that much.</p>
+
+    </div>
+
+    
+        <footer>
+            <hr>
+            <p>
+                
+                    Published by Samuel Gregson
+                
+                
+                    
+                    in <a href="https://zacxalot.github.io/categories/flat-blend/">Flat-Blend</a>
+                
+                
+                    and
+                    tagged
+                    
+                        <a href="https://zacxalot.github.io/tags/rust/">rust</a>
+                        
+                            
+                                
+                                    ,
+                                
+                            
+                        
+                    
+                        <a href="https://zacxalot.github.io/tags/bmesh/">bmesh</a>
+                        
+                            
+                                
+                                    and
+                                
+                            
+                        
+                    
+                        <a href="https://zacxalot.github.io/tags/blender/">blender</a>
+                        
+                            
+                        
+                    
+                
+            </p>
+            
+            
+        </footer>
+    
+</article>
+
+
+    </body>
+
+</html>
