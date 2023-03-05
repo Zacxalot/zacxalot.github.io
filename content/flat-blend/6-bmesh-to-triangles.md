@@ -5,7 +5,7 @@ transparent = true
 
 [taxonomies]
 categories = ["Flat-Blend"]
-tags = ["rust","bmesh","blender"]
+tags = ["rust","bmesh","blender","vulkan"]
 +++
 
 Another short post from me this week. I've made some progress on getting `BMesh` converted into a list of vertices and triangles for Vulkan to eat up.
