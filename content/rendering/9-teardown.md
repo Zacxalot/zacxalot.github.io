@@ -27,7 +27,26 @@ The frame I have captured for analysis doesn't do the games capabilities any jus
 
 ## Voxels
 
-The first thing in the rendering job list (after clearing the screen, and doing something [with this texture](wtf.png)!?!?) is some voxels! [Voxels](https://en.wikipedia.org/wiki/Voxel) are basically just images, that are in 3D. Similarly to 2D images though, the data that is stored in them doesn't have to be colour values meant for human consumption. In the case of Teardown, the 3D textures 
+The first thing in the rendering job list (after clearing the screen, and doing something [with this texture](wtf.png)!?!?) is some voxels! [Voxels](https://en.wikipedia.org/wiki/Voxel) are the 3D equivalent of pixels. Similarly to 2D images, the data that is stored per voxel doesn't have to be colour values meant for human consumption.
+
+In the case of Teardown, the 3D textures contain references to [indexed colours](https://en.wikipedia.org/wiki/Indexed_color), which are held in a separate texture. This technique was utilised in a lot (sometimes involuntarily) in early games, but it's benefits still ring true in its usage today. By using it in Teardown, the developer saved ~75% of storage per voxel because they only need to store a single colour channel. Due to the extra dimension, voxel data can get very big very quick, so any space saving makes a great impact.
+
+
+Trying to visualise 3D textures in 2D is difficult, so to give you an good example of how this works, I extracted a 3D texture from the framebuffer in this capture and wrangled it into Blender for some rendering!
+
+Below is a representation of the 3D texture with it's single channel (grey) index values mapped to the colour channels.
+
+{{image(src="indexed.png", alt="a greyscale image of the sign representing the indexed values before they have been mapped to colours" caption="")}}
+
+Along with this, there is the texture that holds all of the colours these index values map to. The image below is just a snippet of the whole texture which contains all of the colours for the scene. This snippet does not necessarily have the colours for the sign. Without diving into the code, I'm guessing that each row is an object.
+
+{{image(src="index colours.png", alt="a pixelated image where each pixel is a single colour " caption="" style="image-rendering: crisp-edges")}}
+
+With both of these, we can get our final colours per voxel. Below is a 2D example of this in action
+
+{{image(src="battenberg.svg", alt="a pixelated image where each pixel is a single colour " caption="" style="image-rendering: crisp-edges")}}
+
+With the colours applied to our voxels, we get this!
 
 <model-viewer 
     src="sign.glb"

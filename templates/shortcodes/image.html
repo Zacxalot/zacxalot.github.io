@@ -1,5 +1,5 @@
 {% set abspath = "./" ~ src %}
 <figure>
-    <img alt="{{ alt }}" src="{{abspath}}" width="100%" />
+    <img alt="{{ alt }}" src="{{abspath}}" width="100%" style="{{style | default(value="")}}" />
     <figcaption>{{caption}}</figcaption>
 </figure>
