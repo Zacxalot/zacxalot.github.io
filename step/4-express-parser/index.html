@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+      <meta http-equiv="X-UA-Compatible" content="IE=edge">
+      <meta http-equiv="content-type" content="text/html; charset=utf-8">
+      <meta name="google-site-verification" content="S_D6XT0jzn6m38pioQTiMnY2HFPuJUc3wtdV3CRtBEk" />
+      <script data-goatcounter="https://zacxalot.goatcounter.com/count"
+        async src="//gc.zgo.at/count.js"></script>
+
+      <!-- Enable responsiveness on mobile devices-->
+      <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1">
+
+      <title></title>
+
+      
+        <link rel="alternate" type="application/atom+xml" title="RSS" href="https://zacxalot.github.io/atom.xml">
+      
+
+      
+          <link rel="stylesheet" href="https://zacxalot.github.io/site.css">
+      
+
+      
+      
+    </head>
+
+    <body class="hack dark main container">
+        
+    
+        
+                
+                    <header>
+                        <nav itemscope itemtype="http://schema.org/SiteNavigationElement">
+                        
+                            <a itemprop="url"
+                               class=""
+                               href="https:&#x2F;&#x2F;zacxalot.github.io">
+                                <span itemprop="name">Home</span></a>
+                        
+                            <a itemprop="url"
+                               class=""
+                               href="https:&#x2F;&#x2F;zacxalot.github.io&#x2F;categories">
+                                <span itemprop="name">Categories</span></a>
+                        
+                            <a itemprop="url"
+                               class=""
+                               href="https:&#x2F;&#x2F;zacxalot.github.io&#x2F;tags">
+                                <span itemprop="name">Tags</span></a>
+                        
+                            <a itemprop="url"
+                               class=""
+                               href="https:&#x2F;&#x2F;github.com&#x2F;Zacxalot">
+                                <span itemprop="name">GitHub</span></a>
+                        
+                            <a itemprop="url"
+                               class=""
+                               href="https:&#x2F;&#x2F;www.linkedin.com&#x2F;in&#x2F;s-gregson&#x2F;">
+                                <span itemprop="name">LinkedIn</span></a>
+                        
+                        </nav>
+                    </header>
+                
+            
+    
+
+<article itemscope itemtype="http://schema.org/BlogPosting">
+    <header>
+        <h1 itemprop="headline">STEP File Parsing (In Rust 😉)</h1>
+        <span class="muted">
+<svg style="margin-bottom:-3px" class="i-clock" viewBox="0 0 32 32" width="16" height="16" fill="none"
+    stroke="currentcolor" stroke-linecap="round" stroke-linejoin="round" stroke-width="6.25%">
+    <circle cx="16" cy="16" r="14" />
+    <path d="M16 8 L16 16 20 20" />
+</svg>
+<span>10 minute read</span>
+<svg style="margin-bottom: -3px" class="i-edit" viewBox="0 0 32 32" width="16" height="16" fill="none"
+    stroke="currentcolor" stroke-linecap="round" stroke-linejoin="round" stroke-width="6.25%">
+    <path d="M30 7 L25 2 5 22 3 29 10 27 Z M21 6 L26 11 Z M5 22 L10 27 Z" />
+</svg>
+
+Published: 2023-02-10
+</span>
+    </header>
+    <div itemprop="articleBody">
+      <script type="module" src="https://unpkg.com/@google/model-viewer/dist/model-viewer.min.js"></script>
+<p>This is a bit different from the stuff I've been posting about so far.
+By &quot;a bit different&quot; I mean this isn't about Blender, but it is still about 3D data structures involving Rust, so that &quot;bit&quot; really is just a &quot;bit&quot;.</p>
+<p>At work, we deal with lots of CAD data in <a href="https://en.wikipedia.org/wiki/ISO_10303-21">STEP</a> format. These STEP files contain all the data needed to define 3D parts. On top of this, they hold definitions for assemblies  and, depending on the version of the format you have, can also include information regarding the colour of parts (which is particularly interesting to the company). Painfully though, it still seems like a lot of information, such as part materials, that is available in native CAD data, is lost when converted into STEP. Everything that STEP is capable of is laid out in <a href="https://www.iso.org/standard/84667.html">ISO standard 10303</a>, but I'm not abouts to spend 145 of my hard-earned Swiss Francs on something I can enjoy guessing about, so that's why I'm here.</p>
+<h2 id="chronic-step-pain">Chronic Step Pain</h2>
+<p>When I think of a CAD file, I imagine a super dense binary file with high precision parameters defining the placement of each edge, face, curve and corner. For the most part, this is an accurate assumption. FreeCAD for example stores it's data like this, just a big old heap of bits. This is great, humans don't need to and definately don't want to read CAD data in its raw format. By the same merit, humans <i>do</i> want the software they use to interact with their CAD to be able to read the data super quick.</p>
+<p>This is where STEP enters the ring. If you open up a STEP file in a text editor, you are met with a nasty surprise. It's all in ASCII. What the hell? Who dreamt this disaster up? Here's an example just in case you didn't believe me or don't have one to hand.</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>ISO-10303-21;
+</span><span>HEADER;
+</span><span>/* Generated by software containing ST-Developer
+</span><span> * from STEP Tools, Inc. (www.steptools.com) 
+</span><span> */
+</span><span>
+</span><span>FILE_DESCRIPTION(
+</span><span>/* description */ (&#39;&#39;),
+</span><span>/* implementation_level */ &#39;2;1&#39;);
+</span><span>
+</span><span>FILE_NAME(
+</span><span>/* name */ &#39;Asm v2.step&#39;,
+</span><span>/* time_stamp */ &#39;2023-02-09T22:05:44Z&#39;,
+</span><span>/* author */ (&#39;&#39;),
+</span><span>/* organization */ (&#39;&#39;),
+</span><span>/* preprocessor_version */ &#39;ST-DEVELOPER v19.2&#39;,
+</span><span>/* originating_system */ &#39;Autodesk Translation Framework v11.17.0.187&#39;,
+</span><span>
+</span><span>/* authorisation */ &#39;&#39;);
+</span><span>
+</span><span>FILE_SCHEMA ((&#39;AUTOMOTIVE_DESIGN { 1 0 10303 214 3 1 1 }&#39;));
+</span><span>ENDSEC;
+</span><span>
+</span><span>DATA;
+</span><span>#10=MECHANICAL_DESIGN_GEOMETRIC_PRESENTATION_REPRESENTATION(&#39;&#39;,(#21),#3284);
+</span><span>#11=ITEM_DEFINED_TRANSFORMATION($,$,#827,#869);
+</span><span>#12=ITEM_DEFINED_TRANSFORMATION($,$,#827,#870);
+</span><span>#13=(
+</span><span>REPRESENTATION_RELATIONSHIP($,$,#3296,#3295)
+</span><span>REPRESENTATION_RELATIONSHIP_WITH_TRANSFORMATION(#11)
+</span><span>SHAPE_REPRESENTATION_RELATIONSHIP()
+</span><span>);
+</span><span>...
+</span></code></pre>
+<p>As you can see, there's a bunch of metadata at the top, which is perfectly fine, you've got to put that stuff somewhere right. But the pain kicks in when you hit the <code>DATA</code> section towards the bottom. This is where all of our shapes, assemblies and colour lies, defined in a semicolon separated list of numbered tags, each with varying numbers of parameters. These lines then reference other lines using <code>#</code> symbols making it quite difficult to make your way around as a human with a text editor. This is where my annoyance hits its peak. If you're going to make a file format that's human readable, at least make it readable to the point where it's useful. The sacrafice of not using binary is completely wasted othewise.</p>
+<p>In the file I showed a snippet of up there, there's another 3000 lines of &quot;DATA&quot;, I don't want to kid you into thinking that STEP is super dense after all. In fact, as you probably have guessed, it's terrible at that too! The step file for the model shown below has a filesize of 254kb, wheras the FreeCAD file (created using the STEP file) is only 59kb.</p>
+<p><model-viewer 
+    src="asm.glb"
+    environment-image="bank_vault_1k.hdr"
+    ios-src="asm.glb"
+    alt="3D render of 2 cad parts assembled together"
+    rotation-per-second="32"
+    shadow-intensity="1"
+    camera-controls
+    auto-rotate ar
+    style="width:100%;height: 75vh; border-radius:15px;"
+></p>
+<p>The STEP file format is regarded by many as poor as far as I'm aware, just look at <a href="https://en.wikipedia.org/wiki/ISO_10303-21#Criticism">the wikipedia page for its not so gleaming reputation</a>. I'm definately not a fan.</p>
+<h2 id="doing-bits">Doing Bits</h2>
+<p>I've had my rant now and I feel like a new man, less complaining from now on. So, I've written a very basic parser for the STEP file format, which is based on the <a href="https://en.wikipedia.org/wiki/EXPRESS_(data_modeling_language)">EXPRESS</a> schema. As I've said earlier, I've not purchased the ISO document that defines STEP, which sets me off to a bad start. I also think it's important to mention that this parser is far from complete. I've got it working with a few STEP files, but I'm sure there's all kinds of funky edge cases I've missed.</p>
+<p>For parsing, I've used the <a href="https://crates.io/crates/nom#streaming-formats">nom</a> library. It's a bit difficult to get your head around at first, but once you get the hang of it it's extremely powerful. This is the function that parses a single line of data. It takes in a <code>&amp;str</code> and if the parsing is a success, it returns an <code>Ok</code> <code>IResult</code> containing the rest of the file yet to be parsed as well as a parsed DataLine object. </p>
+<pre data-lang="rust" style="background-color:#2b303b;color:#c0c5ce;" class="language-rust "><code class="language-rust" data-lang="rust"><span>#[</span><span style="color:#bf616a;">derive</span><span>(Debug)]
+</span><span style="color:#b48ead;">pub struct </span><span>DataLine&lt;</span><span style="color:#b48ead;">&#39;a</span><span>&gt; {
+</span><span>    </span><span style="color:#b48ead;">pub </span><span style="color:#bf616a;">number</span><span>: </span><span style="color:#b48ead;">u32</span><span>,
+</span><span>    </span><span style="color:#b48ead;">pub </span><span style="color:#bf616a;">chunks</span><span>: Vec&lt;Chunk&lt;</span><span style="color:#b48ead;">&#39;a</span><span>&gt;&gt;,
+</span><span>}
+</span><span>
+</span><span style="color:#b48ead;">pub fn </span><span style="color:#8fa1b3;">data_line</span><span>(</span><span style="color:#bf616a;">input</span><span>: &amp;</span><span style="color:#b48ead;">str</span><span>) -&gt; IResult&lt;&amp;</span><span style="color:#b48ead;">str</span><span>, DataLine&gt; {
+</span><span>    </span><span style="color:#65737e;">// Take only a single line, up to the semicolon
+</span><span>    </span><span style="color:#b48ead;">let </span><span>(remaining, line) = </span><span style="color:#96b5b4;">take_until</span><span>(&quot;</span><span style="color:#a3be8c;">;</span><span>&quot;)(input)?;
+</span><span>    </span><span style="color:#b48ead;">let </span><span>(next_line, _) = </span><span style="color:#96b5b4;">take</span><span>(</span><span style="color:#d08770;">1</span><span style="color:#b48ead;">usize</span><span>)(remaining)?;
+</span><span>
+</span><span>    </span><span style="color:#65737e;">// Take the # off the front
+</span><span>    </span><span style="color:#b48ead;">let </span><span>(line, _) = </span><span style="color:#b48ead;">char</span><span>(&#39;</span><span style="color:#a3be8c;">#</span><span>&#39;)(line)?;
+</span><span>
+</span><span>    </span><span style="color:#65737e;">// Get the digits inbetween&quot;# and =
+</span><span>    </span><span style="color:#b48ead;">let </span><span>(line, number) = </span><span style="color:#96b5b4;">take_until</span><span>(&quot;</span><span style="color:#a3be8c;">=</span><span>&quot;)(line)?;
+</span><span>
+</span><span>    </span><span style="color:#65737e;">// Eat the =
+</span><span>    </span><span style="color:#b48ead;">let </span><span>(line, _) = </span><span style="color:#b48ead;">char</span><span>(&#39;</span><span style="color:#a3be8c;">=</span><span>&#39;)(line)?;
+</span><span>
+</span><span>    </span><span style="color:#65737e;">// Turn the remaining text into chunks
+</span><span>    </span><span style="color:#b48ead;">let </span><span>(_, chunks) = </span><span style="color:#96b5b4;">to_chunks</span><span>(line)?;
+</span><span>
+</span><span>    </span><span style="color:#b48ead;">let</span><span> data_line: DataLine = DataLine {
+</span><span>        number: number.parse::&lt;</span><span style="color:#b48ead;">u32</span><span>&gt;().</span><span style="color:#96b5b4;">unwrap</span><span>(),
+</span><span>        chunks,
+</span><span>    };
+</span><span>
+</span><span>    Ok((next_line, data_line))
+</span><span>}
+</span></code></pre>
+<p>You'll notice that on each line that we use a <a href="https://github.com/rust-bakery/nom/blob/main/doc/choosing_a_combinator.md">combinator</a>, we unwrap the result with a <code>?</code>. This means if the combinator failed, the error will get bubbled up and depending on how the original function was called nom can handle the result differently. For example, the combinator that is calling our <code>data_line</code> function is a <a href="https://docs.rs/nom/latest/nom/multi/fn.many1.html"><code>many1</code></a>, which will keep running a combinator on the returned remaining data until it returns an error, at which point it will return all the data it managed to parse as a <code>Vec</code>. This is perfect for us as we want to keep parsing lines until we hit something we can't parse as a data line, such as an <code>ENDSEC;</code> which breaks up sections in STEP.</p>
+<p>With this so far we have parsed the <code>#13=</code> and the trailing <code>;</code> out of this:</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>#13=(
+</span><span>REPRESENTATION_RELATIONSHIP($,$,#3296,#3295)
+</span><span>REPRESENTATION_RELATIONSHIP_WITH_TRANSFORMATION(#11)
+</span><span>SHAPE_REPRESENTATION_RELATIONSHIP()
+</span><span>);
+</span></code></pre>
+<p>Leaving just this:</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>(
+</span><span>REPRESENTATION_RELATIONSHIP($,$,#3296,#3295)
+</span><span>REPRESENTATION_RELATIONSHIP_WITH_TRANSFORMATION(#11)
+</span><span>SHAPE_REPRESENTATION_RELATIONSHIP()
+</span><span>)
+</span></code></pre>
+<p>to get sent to the <code>to_chunks</code> combinator.</p>
+<p>Because I don't know the official names of anything in here, I decided to call these things <code>REPRESENTATION_RELATIONSHIP($,$,#3296,#3295)</code> chunks. <code>to_chunks</code> then uses the <a href="https://docs.rs/nom/latest/nom/branch/fn.alt.html"><code>alt</code></a> combinator to get the chunks that make up a line (sometimes a single line holds a few, such as the one in the example above).</p>
+<pre data-lang="rust" style="background-color:#2b303b;color:#c0c5ce;" class="language-rust "><code class="language-rust" data-lang="rust"><span>#[</span><span style="color:#bf616a;">derive</span><span>(Debug)]
+</span><span style="color:#b48ead;">pub struct </span><span>Chunk&lt;</span><span style="color:#b48ead;">&#39;a</span><span>&gt; {
+</span><span>    </span><span style="color:#b48ead;">pub </span><span style="color:#bf616a;">tag</span><span>: &amp;</span><span style="color:#b48ead;">&#39;a str</span><span>,
+</span><span>    </span><span style="color:#b48ead;">pub </span><span style="color:#bf616a;">elements</span><span>: Vec&lt;Element&lt;</span><span style="color:#b48ead;">&#39;a</span><span>&gt;&gt;,
+</span><span>}
+</span><span>
+</span><span style="color:#b48ead;">pub fn </span><span style="color:#8fa1b3;">to_chunks</span><span>(</span><span style="color:#bf616a;">input</span><span>: &amp;</span><span style="color:#b48ead;">str</span><span>) -&gt; IResult&lt;&amp;</span><span style="color:#b48ead;">str</span><span>, Vec&lt;Chunk&gt;&gt; {
+</span><span>    </span><span style="color:#96b5b4;">alt</span><span>((delimited_chunks, single_chunk_as_vec))(input)
+</span><span>}
+</span><span>
+</span><span style="color:#b48ead;">pub fn </span><span style="color:#8fa1b3;">single_chunk_as_vec</span><span>(</span><span style="color:#bf616a;">input</span><span>: &amp;</span><span style="color:#b48ead;">str</span><span>) -&gt; IResult&lt;&amp;</span><span style="color:#b48ead;">str</span><span>, Vec&lt;Chunk&gt;&gt; {
+</span><span>    </span><span style="color:#b48ead;">let </span><span>(remaining, chunk) = </span><span style="color:#96b5b4;">single_chunk</span><span>(input)?;
+</span><span>    Ok((remaining, vec![chunk]))
+</span><span>}
+</span><span>
+</span><span style="color:#b48ead;">pub fn </span><span style="color:#8fa1b3;">single_chunk</span><span>(</span><span style="color:#bf616a;">input</span><span>: &amp;</span><span style="color:#b48ead;">str</span><span>) -&gt; IResult&lt;&amp;</span><span style="color:#b48ead;">str</span><span>, Chunk&gt; {
+</span><span>    </span><span style="color:#65737e;">// Find the tag
+</span><span>    </span><span style="color:#b48ead;">let </span><span>(line, tag_value) = </span><span style="color:#96b5b4;">take_until</span><span>(&quot;</span><span style="color:#a3be8c;">(</span><span>&quot;)(input.</span><span style="color:#96b5b4;">trim</span><span>())?;
+</span><span>
+</span><span>    </span><span style="color:#65737e;">// Optionally grab the list of elements
+</span><span>    </span><span style="color:#b48ead;">let </span><span>(line, elements) = </span><span style="color:#96b5b4;">opt</span><span>(delimited_elements)(line)?;
+</span><span>
+</span><span>    Ok((
+</span><span>        line,
+</span><span>        Chunk {
+</span><span>            tag: tag_value,
+</span><span>            </span><span style="color:#65737e;">// If there were no elements, just return vec![]
+</span><span>            elements: elements.</span><span style="color:#96b5b4;">unwrap_or_default</span><span>(),
+</span><span>        },
+</span><span>    ))
+</span><span>}
+</span><span>
+</span><span style="color:#b48ead;">pub fn </span><span style="color:#8fa1b3;">delimited_chunks</span><span>(</span><span style="color:#bf616a;">input</span><span>: &amp;</span><span style="color:#b48ead;">str</span><span>) -&gt; IResult&lt;&amp;</span><span style="color:#b48ead;">str</span><span>, Vec&lt;Chunk&gt;&gt; {
+</span><span>    </span><span style="color:#b48ead;">let </span><span>(remaining, chunks) = </span><span style="color:#96b5b4;">delimited</span><span>(</span><span style="color:#b48ead;">char</span><span>(&#39;</span><span style="color:#a3be8c;">(</span><span>&#39;), </span><span style="color:#96b5b4;">many0</span><span>(single_chunk), </span><span style="color:#b48ead;">char</span><span>(&#39;</span><span style="color:#a3be8c;">)</span><span>&#39;))(input)?;
+</span><span>    Ok((remaining, chunks))
+</span><span>}
+</span></code></pre>
+<p>Everything here ultimately relies on the <code>single_chunk</code> combinator.</p>
+<p>At this point we have parsed <code>REPRESENTATION_RELATIONSHIP($,$,#3296,#3295)</code> to give us <code>REPRESENTATION_RELATIONSHIP</code> as the tag and <code>($,$,#3296,#3295)</code> to pass into our <code>delimited_elements</code> combinator.</p>
+<p>The <code>delimited_elements</code> combinator makes use of the <a href="https://docs.rs/nom/latest/nom/sequence/fn.delimited.html"><code>delimited</code></a> and the  <a href="https://docs.rs/nom/latest/nom/multi/fn.separated_list0.html"><code>separated_list0</code></a> combinators to call the <code>element</code> function on each comma separated value, in between a pair of brackets.</p>
+<pre data-lang="rust" style="background-color:#2b303b;color:#c0c5ce;" class="language-rust "><code class="language-rust" data-lang="rust"><span style="color:#b48ead;">pub enum </span><span>Element&lt;&#39;a&gt; {
+</span><span>    Reference(</span><span style="color:#b48ead;">u64</span><span>),
+</span><span>    Dollar,
+</span><span>    Asterisk,
+</span><span>    Elements(Vec&lt;Element&lt;</span><span style="color:#b48ead;">&#39;a</span><span>&gt;&gt;),
+</span><span>    String(&amp;</span><span style="color:#b48ead;">&#39;a str</span><span>),
+</span><span>    DotString(&amp;</span><span style="color:#b48ead;">&#39;a str</span><span>),
+</span><span>    Float(</span><span style="color:#b48ead;">f64</span><span>),
+</span><span>    Integer(</span><span style="color:#b48ead;">i64</span><span>),
+</span><span>    Chunk(Chunk&lt;</span><span style="color:#b48ead;">&#39;a</span><span>&gt;),
+</span><span>}
+</span><span>
+</span><span style="color:#b48ead;">pub fn </span><span style="color:#8fa1b3;">delimited_elements</span><span>(</span><span style="color:#bf616a;">input</span><span>: &amp;</span><span style="color:#b48ead;">str</span><span>) -&gt; IResult&lt;&amp;</span><span style="color:#b48ead;">str</span><span>, Vec&lt;Element&gt;&gt; {
+</span><span>    </span><span style="color:#96b5b4;">delimited</span><span>(</span><span style="color:#b48ead;">char</span><span>(&#39;</span><span style="color:#a3be8c;">(</span><span>&#39;), </span><span style="color:#96b5b4;">separated_list0</span><span>(</span><span style="color:#96b5b4;">tag</span><span>(&quot;</span><span style="color:#a3be8c;">,</span><span>&quot;), element), </span><span style="color:#b48ead;">char</span><span>(&#39;</span><span style="color:#a3be8c;">)</span><span>&#39;))(input)
+</span><span>}
+</span><span>
+</span><span style="color:#b48ead;">pub fn </span><span style="color:#8fa1b3;">element</span><span>(</span><span style="color:#bf616a;">input</span><span>: &amp;</span><span style="color:#b48ead;">str</span><span>) -&gt; IResult&lt;&amp;</span><span style="color:#b48ead;">str</span><span>, Element&gt; {
+</span><span>    </span><span style="color:#96b5b4;">alt</span><span>((
+</span><span>        reference,
+</span><span>        dollar,
+</span><span>        asterisk,
+</span><span>        nested_elements,
+</span><span>        string,
+</span><span>        dot_string,
+</span><span>        float,
+</span><span>        integer,
+</span><span>        chunk,
+</span><span>    ))(input.</span><span style="color:#96b5b4;">trim</span><span>())
+</span><span>}
+</span></code></pre>
+<p>The <code>element</code> function makes use of the <code>alt</code> to try each possible element type and then jam it into an Element enum. I won't go through every element parser I wrote, but here are a few for you to get an idea of what they do. If you want the whole thing, the source code is available <a href="https://github.com/Zacxalot/express-parse">here</a>.</p>
+<pre data-lang="rust" style="background-color:#2b303b;color:#c0c5ce;" class="language-rust "><code class="language-rust" data-lang="rust"><span style="color:#b48ead;">pub fn </span><span style="color:#8fa1b3;">reference</span><span>(</span><span style="color:#bf616a;">input</span><span>: &amp;</span><span style="color:#b48ead;">str</span><span>) -&gt; IResult&lt;&amp;</span><span style="color:#b48ead;">str</span><span>, Element&gt; {
+</span><span>    </span><span style="color:#b48ead;">let </span><span>(line, _) = </span><span style="color:#b48ead;">char</span><span>(&#39;</span><span style="color:#a3be8c;">#</span><span>&#39;)(input)?;
+</span><span>    </span><span style="color:#b48ead;">let </span><span>(remaining, number) = </span><span style="color:#96b5b4;">digit1</span><span>(line)?;
+</span><span>
+</span><span>    Ok((
+</span><span>        remaining,
+</span><span>        Element::Reference(number.parse::&lt;</span><span style="color:#b48ead;">u64</span><span>&gt;().</span><span style="color:#96b5b4;">unwrap</span><span>()),
+</span><span>    ))
+</span><span>}
+</span><span>
+</span><span style="color:#b48ead;">pub fn </span><span style="color:#8fa1b3;">dollar</span><span>(</span><span style="color:#bf616a;">input</span><span>: &amp;</span><span style="color:#b48ead;">str</span><span>) -&gt; IResult&lt;&amp;</span><span style="color:#b48ead;">str</span><span>, Element&gt; {
+</span><span>    </span><span style="color:#b48ead;">let </span><span>(remaining, _) = </span><span style="color:#b48ead;">char</span><span>(&#39;</span><span style="color:#a3be8c;">$</span><span>&#39;)(input)?;
+</span><span>    Ok((remaining, Element::Dollar))
+</span><span>}
+</span><span>
+</span><span style="color:#b48ead;">pub fn </span><span style="color:#8fa1b3;">string</span><span>(</span><span style="color:#bf616a;">input</span><span>: &amp;</span><span style="color:#b48ead;">str</span><span>) -&gt; IResult&lt;&amp;</span><span style="color:#b48ead;">str</span><span>, Element&gt; {
+</span><span>    </span><span style="color:#b48ead;">let </span><span>(remaining, string_value) = </span><span style="color:#96b5b4;">delimited</span><span>(</span><span style="color:#96b5b4;">tag</span><span>(&quot;</span><span style="color:#a3be8c;">&#39;</span><span>&quot;), </span><span style="color:#96b5b4;">take_until</span><span>(&quot;</span><span style="color:#a3be8c;">&#39;</span><span>&quot;), </span><span style="color:#96b5b4;">tag</span><span>(&quot;</span><span style="color:#a3be8c;">&#39;</span><span>&quot;))(input)?;
+</span><span>    Ok((remaining, Element::String(string_value)))
+</span><span>}
+</span></code></pre>
+<p>And just like that, we're done. Well, we're not done because I'm sure there's plenty of examples of STEP files that won't work with it, but it does work for my step files, so I'm happy for now. The first improvement to make would probably to stick some more <code>.trim</code>'s around the place just to take out some whitespace. It would also be nice to have a unit test for each of the combinators which would be quite easy and satisfying to do.</p>
+<h2 id="serde-json-and-binary">Serde, JSON and Binary</h2>
+<p>Because it's easy to, I decided to serialise the resulting data structure into json which comes out looking like this:</p>
+<pre data-lang="json" style="background-color:#2b303b;color:#c0c5ce;" class="language-json "><code class="language-json" data-lang="json"><span>[
+</span><span>    {
+</span><span>        &quot;</span><span style="color:#a3be8c;">number</span><span>&quot;: </span><span style="color:#d08770;">10</span><span>,
+</span><span>        &quot;</span><span style="color:#a3be8c;">chunks</span><span>&quot;: [
+</span><span>            {
+</span><span>                &quot;</span><span style="color:#a3be8c;">tag</span><span>&quot;: &quot;</span><span style="color:#a3be8c;">MECHANICAL_DESIGN_GEOMETRIC_PRESENTATION_REPRESENTATION</span><span>&quot;,
+</span><span>                &quot;</span><span style="color:#a3be8c;">elements</span><span>&quot;: [
+</span><span>                    {
+</span><span>                        &quot;</span><span style="color:#a3be8c;">String</span><span>&quot;: &quot;&quot;
+</span><span>                    },
+</span><span>                    {
+</span><span>                        &quot;</span><span style="color:#a3be8c;">Elements</span><span>&quot;: [
+</span><span>                            {
+</span><span>                                &quot;</span><span style="color:#a3be8c;">Reference</span><span>&quot;: </span><span style="color:#d08770;">21
+</span><span>                            }
+</span><span>                        ]
+</span><span>                    },
+</span><span>                    {
+</span><span>                        &quot;</span><span style="color:#a3be8c;">Reference</span><span>&quot;: </span><span style="color:#d08770;">3284
+</span><span>                    }
+</span><span>                ]
+</span><span>            }
+</span><span>        ]
+</span><span>    },
+</span><span>    </span><span style="background-color:#bf616a;color:#2b303b;">...</span><span>
+</span></code></pre>
+<p>Just as bad as STEP, now usable in every programming language you can think of... and 3x the file size 😝. It is however probably a little nicer to work with now that you have all the tools you'd normally have for looking at json at your disposal such as JsonPath. Because of the nature of the data structure, this json is <a href="https://en.wikipedia.org/wiki/Marshalling_(computer_science)">marshalled</a>, in a similar way to how DynamoDB records are, which is a bit awkward. There's probably a way of dealing with this marshalling using serde, I just don't care enough to investigate it right now.</p>
+<p>Also, because it's easy to do, I decided to encode and compress the resulting data structure using <a href="https://crates.io/crates/bincode"><code>bincode</code></a> and <a href="https://crates.io/crates/flate2"><code>flate2</code></a>, and ended up with a file only 44kb big 🥳. I'm not counting this as a win over FreeCAD though, I'm sure that's much more efficient and stores way more data that what I'm doing. Still, pretty cool compared to the STEP file's 254kb.</p>
+<hr />
+<p>I don't know what compelled me to reccomend a song in my last post, but I think it's fun, so I'm going to carry on with it.</p>
+<p>This is <code>Caroline Polachek's</code> remix of <code>Oh Yeah</code> by <code>A.G. Cook</code>. Probably not for everyone this, but I think it's a really fun song. The original version feels a bit dead after listening to the remix, but you can pretend it doesn't exist. Enjoy!
+<iframe style="border-radius:12px" src="https:&#x2F;&#x2F;open.spotify.com&#x2F;embed&#x2F;track&#x2F;2tPN4TxN7ZYlSggqU7IENd?utm_source=generator" width="100%" height="152" frameBorder="0" allowfullscreen=""
+    allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" loading="lazy"></iframe></p>
+
+    </div>
+
+    
+        <footer>
+            <hr>
+            <p>
+                
+                    Published by Samuel Gregson
+                
+                
+                    
+                    in <a href="https://zacxalot.github.io/categories/express/">Express</a>
+                
+                
+                    and
+                    tagged
+                    
+                        <a href="https://zacxalot.github.io/tags/rust/">rust</a>
+                        
+                            
+                                
+                                    ,
+                                
+                            
+                        
+                    
+                        <a href="https://zacxalot.github.io/tags/express/">express</a>
+                        
+                            
+                                
+                                    ,
+                                
+                            
+                        
+                    
+                        <a href="https://zacxalot.github.io/tags/step/">step</a>
+                        
+                            
+                                
+                                    and
+                                
+                            
+                        
+                    
+                        <a href="https://zacxalot.github.io/tags/bad-file-formats/">bad file formats</a>
+                        
+                            
+                        
+                    
+                
+            </p>
+            
+            
+        </footer>
+    
+</article>
+
+
+    </body>
+
+</html>

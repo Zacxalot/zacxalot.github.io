@@ -1,0 +1,130 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom" xml:lang="en">
+	<title> - graphics</title>
+	<link href="https://zacxalot.github.io/tags/graphics/atom.xml" rel="self" type="application/atom+xml"/>
+  <link href="https://zacxalot.github.io"/>
+	<generator uri="https://www.getzola.org/">Zola</generator>
+	<updated>2023-05-13T00:00:00+00:00</updated>
+	<id>https://zacxalot.github.io/tags/graphics/atom.xml</id>
+	<entry xml:lang="en">
+		<title>Teardown Render Techniques</title>
+		<published>2023-05-13T00:00:00+00:00</published>
+		<updated>2023-05-13T00:00:00+00:00</updated>
+		<link rel="alternate" href="https://zacxalot.github.io/rendering/9-teardown/" type="text/html"/>
+		<id>https://zacxalot.github.io/rendering/9-teardown/</id>
+		<content type="html">&lt;script type=&quot;module&quot; src=&quot;https:&#x2F;&#x2F;unpkg.com&#x2F;@google&#x2F;model-viewer&#x2F;dist&#x2F;model-viewer.min.js&quot;&gt;&lt;&#x2F;script&gt;
+&lt;p&gt;I&#x27;ve had a couple months off from the blog, but I&#x27;m going to try and get back into it again.&lt;&#x2F;p&gt;
+&lt;p&gt;To jump back in, I&#x27;m going to try and figure out how the game &lt;a href=&quot;https:&#x2F;&#x2F;store.steampowered.com&#x2F;app&#x2F;1167630&#x2F;Teardown&#x2F;&quot;&gt;Teardown&lt;&#x2F;a&gt; renders so many voxels and makes it look so pretty at the same time!&lt;&#x2F;p&gt;
+&lt;p&gt;I&#x27;m going to carry on with flat blend at some point, it&#x27;s in dire need of some restructuring to require less boilerplate when adding render passes. Adding that grid took way more effort than I think it should, sapping my motivation along with it.&lt;&#x2F;p&gt;
+&lt;p&gt;Before anything, I just want to make it clear that I&#x27;ll be doing a good amount of guessing here, and my guesses will be wrong in many cases, but hopefully some guesses will be right 😅.&lt;&#x2F;p&gt;
+&lt;h1 id=&quot;teardown&quot;&gt;Teardown&lt;&#x2F;h1&gt;
+&lt;p&gt;Teardown is a destruction simulation sandbox game where you warp the environment to complete heists. If you haven&#x27;t seen any footage of it yet, give some a watch, it&#x27;s very impressive.&lt;&#x2F;p&gt;
+&lt;p&gt;The frame I have captured for analysis doesn&#x27;t do the games capabilities any justice, but for the sake of figuring out what was going on, I thought it would be best to keep simple. &lt;&#x2F;p&gt;
+
+&lt;figure&gt;
+    &lt;img alt=&quot;The final rendered scene from teardown featuring a broken sign, some background structures, telephone wires, trees and a digger&quot; src=&quot;.&amp;#x2F;final-image.png&quot; width=&quot;100%&quot; style=&quot;&quot; &#x2F;&gt;
+    &lt;figcaption&gt;&lt;&#x2F;figcaption&gt;
+&lt;&#x2F;figure&gt;&lt;h2 id=&quot;voxels&quot;&gt;Voxels&lt;&#x2F;h2&gt;
+&lt;p&gt;The first thing in the rendering job list (after clearing the screen, and doing something &lt;a href=&quot;wtf.png&quot;&gt;with this texture&lt;&#x2F;a&gt;!?!?) is some voxels! &lt;a href=&quot;https:&#x2F;&#x2F;en.wikipedia.org&#x2F;wiki&#x2F;Voxel&quot;&gt;Voxels&lt;&#x2F;a&gt; are the 3D equivalent of pixels. Similarly to 2D images, the data that is stored per voxel doesn&#x27;t have to be colour values meant for human consumption.&lt;&#x2F;p&gt;
+&lt;p&gt;In the case of Teardown, the 3D textures contain references to &lt;a href=&quot;https:&#x2F;&#x2F;en.wikipedia.org&#x2F;wiki&#x2F;Indexed_color&quot;&gt;indexed colours&lt;&#x2F;a&gt;, which are held in a separate texture. This technique was utilised in a lot (sometimes involuntarily) in early games, but it&#x27;s benefits still ring true in its usage today. By using it in Teardown, the developer saved ~75% of storage per voxel because they only need to store a single colour channel. Due to the extra dimension, voxel data can get very big very quick, so any space saving makes a great impact.&lt;&#x2F;p&gt;
+&lt;p&gt;Trying to visualise 3D textures in 2D is difficult, so to give you a good example of how this works, I extracted a 3D texture from the framebuffer in this capture and wrangled it into Blender for some rendering!&lt;&#x2F;p&gt;
+&lt;p&gt;Below is a representation of the 3D texture with its single channel (monochrome) index values mapped to the colour channels.&lt;&#x2F;p&gt;
+
+&lt;figure&gt;
+    &lt;img alt=&quot;a greyscale image of the sign representing the indexed values before they have been mapped to colours&quot; src=&quot;.&amp;#x2F;indexed.png&quot; width=&quot;100%&quot; style=&quot;&quot; &#x2F;&gt;
+    &lt;figcaption&gt;&lt;&#x2F;figcaption&gt;
+&lt;&#x2F;figure&gt;
+&lt;p&gt;Along with this, there is the texture that holds all the colours these index values map to. The image below is just a snippet of the whole texture which contains all the colours for the scene. This snippet does not necessarily have the colours for the sign. Without diving into the code, I&#x27;m guessing that each row is an object.&lt;&#x2F;p&gt;
+
+&lt;figure&gt;
+    &lt;img alt=&quot;a pixelated image where each pixel is a single colour &quot; src=&quot;.&amp;#x2F;index colours.png&quot; width=&quot;100%&quot; style=&quot;image-rendering: crisp-edges&quot; &#x2F;&gt;
+    &lt;figcaption&gt;&lt;&#x2F;figcaption&gt;
+&lt;&#x2F;figure&gt;
+&lt;p&gt;With both of these, we can get our final colours per voxel. Below is a 2D example of this in action&lt;&#x2F;p&gt;
+
+&lt;figure&gt;
+    &lt;img alt=&quot;a pixelated image where each pixel is a single colour &quot; src=&quot;.&amp;#x2F;battenberg.svg&quot; width=&quot;100%&quot; style=&quot;image-rendering: crisp-edges&quot; &#x2F;&gt;
+    &lt;figcaption&gt;&lt;&#x2F;figcaption&gt;
+&lt;&#x2F;figure&gt;
+&lt;p&gt;With the colours applied to our voxels, we get this!&lt;&#x2F;p&gt;
+&lt;p&gt;&lt;model-viewer 
+    src=&quot;sign.glb&quot;
+    ios-src=&quot;sign.glb&quot;
+    alt=&quot;&quot;
+    rotation-per-second=&quot;32&quot;
+    shadow-intensity=&quot;1&quot;
+    camera-controls
+    auto-rotate ar
+    style=&quot;width:100%;height: 75vh; border-radius:15px;&quot;
+&gt;&lt;&#x2F;p&gt;
+&lt;p&gt;That isn&#x27;t the whole story though! The model above is made up of 891 cube meshes with different materials, &lt;code&gt;10692&lt;&#x2F;code&gt; triangles and is rendered in &lt;code&gt;891&lt;&#x2F;code&gt; draw calls. The sign in Teardown however, is rendered in a single draw call, and is made up of only &lt;code&gt;12&lt;&#x2F;code&gt; triangles!
+This is because in Teardown, all of the complexity of the structure is held in the 3D voxel textures and is fleshed out by the fragment shader.&lt;&#x2F;p&gt;
+&lt;p&gt;This is where I was hoping to explain how the fragment shader works, but like all shader code, it&#x27;s quite hard to read.
+I think I understand it well enough to summarise though.&lt;&#x2F;p&gt;
+&lt;p&gt;The method it uses is called &lt;a href=&quot;https:&#x2F;&#x2F;en.wikipedia.org&#x2F;wiki&#x2F;Ray_casting&quot;&gt;ray casting&lt;&#x2F;a&gt;, where a ray is cast from the camera towards the the point in space we are looking for. As the ray steps along, intersection tests are made against the 3D texture and once it intersects, it stops, and returns the colour index amongst other things such as the depth of the ray and normal data (not sure how it does this but it&#x27;s smart!).&lt;&#x2F;p&gt;
+&lt;p&gt;Here are some of the images (there&#x27;s some others for masking and transparency but we don&#x27;t care about those) that result from this shader. You&#x27;ll notice the material image which was generated using an index in the same way as the colour image. It&#x27;s used later on to know how metallic (or other properties) a pixel is.&lt;&#x2F;p&gt;
+
+&lt;figure&gt;
+    &lt;img alt=&quot;Four images of the sign we rendered, each one one of the following: colour, depth, material and normal&quot; src=&quot;.&amp;#x2F;first-pass-outputs.png&quot; width=&quot;100%&quot; style=&quot;border-radius: 1.5rem&quot; &#x2F;&gt;
+    &lt;figcaption&gt;&lt;&#x2F;figcaption&gt;
+&lt;&#x2F;figure&gt;
+&lt;p&gt;After this, there is some lighting effects that are applied, but because it&#x27;s daytime the only light that has any effect is the sun. Curiously, there still seems to be a draw call of each of the lights in the scene, they just don&#x27;t do anything 🤷.&lt;&#x2F;p&gt;
+&lt;p&gt;Just after, there is some reflections drawn, using the material texture from earlier, to determine whether something is reflective or not.&lt;&#x2F;p&gt;
+&lt;p&gt;And to finish off the cube map sky texture is drawn, and some bloom is added on top ☀️&lt;&#x2F;p&gt;
+
+&lt;figure&gt;
+    &lt;img alt=&quot;The final rendered scene from teardown featuring a broken sign, some background structures, telephone wires, trees and a digger&quot; src=&quot;.&amp;#x2F;final-image.png&quot; width=&quot;100%&quot; style=&quot;&quot; &#x2F;&gt;
+    &lt;figcaption&gt;&lt;&#x2F;figcaption&gt;
+&lt;&#x2F;figure&gt;
+&lt;hr &#x2F;&gt;
+&lt;p&gt;Before I finish, I want to mention &lt;a href=&quot;https:&#x2F;&#x2F;www.youtube.com&#x2F;watch?v=aMcJ1Jvtef0&amp;amp;t=3353s&quot;&gt;this great video&lt;&#x2F;a&gt; which shows some of the creative ways you can manipulate the colour palette to do animations!&lt;&#x2F;p&gt;
+&lt;p&gt;I&#x27;d also like to apologise for any repetition or poor writing so far, it&#x27;s hard to write about this stuff using words rather than code and maths. And sorry again for any inaccuracies 😅 I&#x27;m just piecing things together using &lt;a href=&quot;https:&#x2F;&#x2F;renderdoc.org&#x2F;&quot;&gt;Renderdoc&lt;&#x2F;a&gt; so I&#x27;m bound to be off in some places.&lt;&#x2F;p&gt;
+&lt;hr &#x2F;&gt;
+&lt;p&gt;&lt;code&gt;Suite-Pee&lt;&#x2F;code&gt; by &lt;code&gt;System Of A Down&lt;&#x2F;code&gt;. Good tune, kinda angry and pretty short but it&#x27;s fun. Intro is amazing and the bridge is like nothing else!
+&lt;iframe style=&quot;border-radius:12px&quot; src=&quot;https:&amp;#x2F;&amp;#x2F;open.spotify.com&amp;#x2F;embed&amp;#x2F;track&amp;#x2F;1qGmxIGEuBEkj7bft72Kh0?utm_source=generator&quot; width=&quot;100%&quot; height=&quot;152&quot; frameBorder=&quot;0&quot; allowfullscreen=&quot;&quot;
+    allow=&quot;autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture&quot; loading=&quot;lazy&quot;&gt;&lt;&#x2F;iframe&gt;&lt;&#x2F;p&gt;
+</content>
+	</entry>
+	<entry xml:lang="en">
+		<title>Getting Started With Vulkan</title>
+		<published>2023-01-26T00:00:00+00:00</published>
+		<updated>2023-01-26T00:00:00+00:00</updated>
+		<link rel="alternate" href="https://zacxalot.github.io/flat-blend/1-getting-started/" type="text/html"/>
+		<id>https://zacxalot.github.io/flat-blend/1-getting-started/</id>
+		<content type="html">&lt;p&gt;Before I get into anything else, I just want to make it clear that this is my first blog post and the first time since my dissertation that I&#x27;ve written anything longer than a few sentences, so go easy on me.&lt;&#x2F;p&gt;
+&lt;h1 id=&quot;the-project-flat-blend&quot;&gt;The Project - Flat-Blend&lt;&#x2F;h1&gt;
+&lt;p&gt;Every time I use any vector editing software, I am frustrated by the limitations of what it can do compared to Blender. So, I’m trying to make a spinoff of Blender, but it’s 2D and it’s written in Rust.&lt;&#x2F;p&gt;
+&lt;p&gt;Key things I want out of this:&lt;&#x2F;p&gt;
+&lt;ul&gt;
+&lt;li&gt;Modifiers: Arrays, mirroring, skinning, boolean, all of the fun stuff that would apply to 2D&lt;&#x2F;li&gt;
+&lt;li&gt;Edit Mode: No messing about with different coloured cursors, select an object, edit it, put it back&lt;&#x2F;li&gt;
+&lt;li&gt;Shortcuts &amp;amp; Controls: I&#x27;m a big fan of how Blender controls, big bonus for me&lt;&#x2F;li&gt;
+&lt;li&gt;SVG Export&lt;&#x2F;li&gt;
+&lt;&#x2F;ul&gt;
+&lt;p&gt;For a first goal, I can’t tell if these are too adventurous or not. The biggest challenge I’m expecting to face is working with Vulkan. I’ve used a little bit of OpenGL in the past but I’m having a go of Vulkan this time around and it has a bit of a steeper learning curve. From what I’ve heard though, the difficulty if offset by the room for efficiency that Vulkan offers. &lt;&#x2F;p&gt;
+&lt;p&gt;Besides the goals of the end product, I have some meta goals to go along-side:&lt;&#x2F;p&gt;
+&lt;ul&gt;
+&lt;li&gt;Large Scale Project: Besides my final year university project, I have never done anything personal with objectives as large as this before, so I’d like to “finish” something finally&lt;&#x2F;li&gt;
+&lt;li&gt;Writing a Blog: I’ve always liked the idea of a blog, even if nobody reads it I feel it’s a nice way of reflecting on what you have achieved and looking at what you can do next. I also plan for this blog to be an encouragement to myself to carry on with the project to completion&lt;&#x2F;li&gt;
+&lt;li&gt;Learning Vulkan: My job title is 3D Software Engineer, so to try and edge myself away from the ever tightening grasp of imposter syndrome, I’d like to finally learn a graphics API through and through&lt;&#x2F;li&gt;
+&lt;&#x2F;ul&gt;
+&lt;h1 id=&quot;code&quot;&gt;Code&lt;&#x2F;h1&gt;
+&lt;p&gt;As I&#x27;ve mentioned, I intend to build this project using Rust. Besides me just enjoying using it, it seems like a good fit for what I want to do. It&#x27;s capable of great performance and has a super handy wrapper around Vulkan called &lt;a href=&quot;https:&#x2F;&#x2F;lib.rs&#x2F;crates&#x2F;vulkano&quot;&gt;Vulkano&lt;&#x2F;a&gt;&lt;&#x2F;p&gt;
+&lt;p&gt;I jumped into startng a couple weeks ago and got some basic stuff going. Really just got a rendering pipeline in there at the moment, managed to render a square and a circle with orthographic projection. I&#x27;m not going into to much detail on what code I&#x27;ve got just yet, I&#x27;ll save that for a later post. I can however &lt;a href=&quot;https:&#x2F;&#x2F;github.com&#x2F;Zacxalot&#x2F;flat-blend&#x2F;&quot;&gt;give you a link to the repo&lt;&#x2F;a&gt; and you can look yourself. It&#x27;s a mess in there at time of writing, don&#x27;t say I didn&#x27;t warn you.&lt;&#x2F;p&gt;
+&lt;p&gt;Here are some screenshots!
+
+&lt;figure&gt;
+    &lt;img alt=&quot;Square rendered in a window, rotated 45 degrees&quot; src=&quot;.&amp;#x2F;square.png&quot; width=&quot;100%&quot; style=&quot;&quot; &#x2F;&gt;
+    &lt;figcaption&gt;Thought I&amp;#x27;d mix it up and render a square rather than a triangle&lt;&#x2F;figcaption&gt;
+&lt;&#x2F;figure&gt;
+
+&lt;figure&gt;
+    &lt;img alt=&quot;Circle rendered in a window&quot; src=&quot;.&amp;#x2F;circle.png&quot; width=&quot;100%&quot; style=&quot;&quot; &#x2F;&gt;
+    &lt;figcaption&gt;72 vertices worth of smooth circly goodness&lt;&#x2F;figcaption&gt;
+&lt;&#x2F;figure&gt;&lt;&#x2F;p&gt;
+&lt;h1 id=&quot;summary&quot;&gt;Summary&lt;&#x2F;h1&gt;
+&lt;p&gt;tl;dr I&#x27;m making blender but flat.&lt;&#x2F;p&gt;
+&lt;p&gt;This might be kind of short in terms of blogs, but it&#x27;s been a long day and I don&#x27;t really know what I&#x27;m doing 😅. Thanks for reading though!&lt;&#x2F;p&gt;
+</content>
+	</entry>
+</feed>

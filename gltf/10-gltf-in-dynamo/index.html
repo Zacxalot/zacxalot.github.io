@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+      <meta http-equiv="X-UA-Compatible" content="IE=edge">
+      <meta http-equiv="content-type" content="text/html; charset=utf-8">
+      <meta name="google-site-verification" content="S_D6XT0jzn6m38pioQTiMnY2HFPuJUc3wtdV3CRtBEk" />
+      <script data-goatcounter="https://zacxalot.goatcounter.com/count"
+        async src="//gc.zgo.at/count.js"></script>
+
+      <!-- Enable responsiveness on mobile devices-->
+      <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1">
+
+      <title></title>
+
+      
+        <link rel="alternate" type="application/atom+xml" title="RSS" href="https://zacxalot.github.io/atom.xml">
+      
+
+      
+          <link rel="stylesheet" href="https://zacxalot.github.io/site.css">
+      
+
+      
+      
+    </head>
+
+    <body class="hack dark main container">
+        
+    
+        
+                
+                    <header>
+                        <nav itemscope itemtype="http://schema.org/SiteNavigationElement">
+                        
+                            <a itemprop="url"
+                               class=""
+                               href="https:&#x2F;&#x2F;zacxalot.github.io">
+                                <span itemprop="name">Home</span></a>
+                        
+                            <a itemprop="url"
+                               class=""
+                               href="https:&#x2F;&#x2F;zacxalot.github.io&#x2F;categories">
+                                <span itemprop="name">Categories</span></a>
+                        
+                            <a itemprop="url"
+                               class=""
+                               href="https:&#x2F;&#x2F;zacxalot.github.io&#x2F;tags">
+                                <span itemprop="name">Tags</span></a>
+                        
+                            <a itemprop="url"
+                               class=""
+                               href="https:&#x2F;&#x2F;github.com&#x2F;Zacxalot">
+                                <span itemprop="name">GitHub</span></a>
+                        
+                            <a itemprop="url"
+                               class=""
+                               href="https:&#x2F;&#x2F;www.linkedin.com&#x2F;in&#x2F;s-gregson&#x2F;">
+                                <span itemprop="name">LinkedIn</span></a>
+                        
+                        </nav>
+                    </header>
+                
+            
+    
+
+<article itemscope itemtype="http://schema.org/BlogPosting">
+    <header>
+        <h1 itemprop="headline">Putting GLTF into DynamoDB</h1>
+        <span class="muted">
+<svg style="margin-bottom:-3px" class="i-clock" viewBox="0 0 32 32" width="16" height="16" fill="none"
+    stroke="currentcolor" stroke-linecap="round" stroke-linejoin="round" stroke-width="6.25%">
+    <circle cx="16" cy="16" r="14" />
+    <path d="M16 8 L16 16 20 20" />
+</svg>
+<span>8 minute read</span>
+<svg style="margin-bottom: -3px" class="i-edit" viewBox="0 0 32 32" width="16" height="16" fill="none"
+    stroke="currentcolor" stroke-linecap="round" stroke-linejoin="round" stroke-width="6.25%">
+    <path d="M30 7 L25 2 5 22 3 29 10 27 Z M21 6 L26 11 Z M5 22 L10 27 Z" />
+</svg>
+
+Published: 2023-09-14
+</span>
+    </header>
+    <div itemprop="articleBody">
+      <img src="header.png" style="display: none"/>
+<p>Since finding out GLTF was just glorified JSON, I've been curious about what storing it in DynamoDB would be like and if it was possible.</p>
+<h2 id="gltf-transform">GLTF Transform!</h2>
+<p>So, GLTF is just a JSON file full of all of our 3D data so we could go through it and read it all ourselves, but <a href="https://www.npmjs.com/package/@gltf-transform/core">GLTF Transform</a> is a lovely package that makes dealing with it much nicer (Developed by the legendary <a href="https://www.donmccurdy.com/">Don McCurdy</a>)</p>
+<p>I've not much more to say about it really, other than it made this project much easier, especially when it came to separating data from the buffers.</p>
+<h2 id="dynamodb-and-toolbox">DynamoDB and Toolbox!</h2>
+<p>A super handy tool that I'm slowly growing to love, and one that I've used in this project, is <a href="https://www.npmjs.com/package/dynamodb-toolbox">DynamoDB Toolbox</a>.
+It helps with single table designs (which is what I'm using here 😉), allowing you to define a table schema, giving you beautifully typed interfaces to interact with Dynamo with.</p>
+<p>It's best to show you with an example.
+Here is the entity definition for a GLTF node in the final code.</p>
+<pre data-lang="typescript" style="background-color:#2b303b;color:#c0c5ce;" class="language-typescript "><code class="language-typescript" data-lang="typescript"><span>new Entity({
+</span><span>    name: &#39;</span><span style="color:#a3be8c;">Node</span><span>&#39;,
+</span><span>    attributes: {
+</span><span>        PK: { partitionKey: </span><span style="color:#d08770;">true</span><span>, hidden: </span><span style="color:#d08770;">true</span><span>, delimiter: &#39;</span><span style="color:#a3be8c;">#</span><span>&#39; },
+</span><span>        SK: { sortKey: </span><span style="color:#d08770;">true</span><span>, hidden: </span><span style="color:#d08770;">true</span><span>, type: &#39;</span><span style="color:#a3be8c;">string</span><span>&#39;, </span><span style="color:#8fa1b3;">default</span><span>: (</span><span style="color:#bf616a;">entity</span><span>: any) </span><span style="color:#b48ead;">=&gt; </span><span style="color:#bf616a;">entity</span><span>.</span><span style="color:#bf616a;">path</span><span>.</span><span style="color:#96b5b4;">join</span><span>(&#39;</span><span style="color:#a3be8c;">#</span><span>&#39;) },
+</span><span>
+</span><span>        path: { required: </span><span style="color:#d08770;">true</span><span>, type: &#39;</span><span style="color:#a3be8c;">list</span><span>&#39; },
+</span><span>
+</span><span>        type: [&#39;</span><span style="color:#a3be8c;">PK</span><span>&#39;, </span><span style="color:#d08770;">0</span><span>, { type: &#39;</span><span style="color:#a3be8c;">string</span><span>&#39;, required: </span><span style="color:#d08770;">true</span><span>, hidden: </span><span style="color:#d08770;">true</span><span>, </span><span style="color:#8fa1b3;">default</span><span>: () </span><span style="color:#b48ead;">=&gt; </span><span>&#39;</span><span style="color:#a3be8c;">Node</span><span>&#39; }],
+</span><span>        model: [&#39;</span><span style="color:#a3be8c;">PK</span><span>&#39;, </span><span style="color:#d08770;">1</span><span>, { type: &#39;</span><span style="color:#a3be8c;">string</span><span>&#39;, required: </span><span style="color:#d08770;">true </span><span>}],
+</span><span>        sceneRef: [&#39;</span><span style="color:#a3be8c;">PK</span><span>&#39;, </span><span style="color:#d08770;">2</span><span>, { type: &#39;</span><span style="color:#a3be8c;">number</span><span>&#39;, required: </span><span style="color:#d08770;">true </span><span>}],
+</span><span>
+</span><span>        ref: { type: &#39;</span><span style="color:#a3be8c;">number</span><span>&#39;, required: </span><span style="color:#d08770;">true </span><span>},
+</span><span>
+</span><span>        name: { type: &#39;</span><span style="color:#a3be8c;">string</span><span>&#39;, required: </span><span style="color:#d08770;">false </span><span>},
+</span><span>        children: { type: &#39;</span><span style="color:#a3be8c;">list</span><span>&#39;, required: </span><span style="color:#d08770;">false </span><span>},
+</span><span>        meshRef: { type: &#39;</span><span style="color:#a3be8c;">number</span><span>&#39;, required: </span><span style="color:#d08770;">false </span><span>},
+</span><span>        rootNodeRefs: { type: &#39;</span><span style="color:#a3be8c;">list</span><span>&#39;, required: </span><span style="color:#d08770;">true </span><span>},
+</span><span>
+</span><span>        data: { type: &#39;</span><span style="color:#a3be8c;">map</span><span>&#39;, required: </span><span style="color:#d08770;">true </span><span>}
+</span><span>    },
+</span><span>    </span><span style="color:#bf616a;">table
+</span><span>} </span><span style="color:#b48ead;">as const</span><span>)
+</span></code></pre>
+<p>Here, each key maps to a key in our final Dynamo item, but each value determines what we can put in the value for that key. There's obviously <code>type</code>, which maps directly to base typescript types, although less helpful when working with maps and lists. We have <code>required</code>, which gives our resulting property a little <code>?</code> if it's false.</p>
+<p>We then get to the <code>hidden</code> property. This allows is to hide the property in the resulting type but keep it in the record. This only works if we have a way of toolbox letting toolbox figure out what the value should be, however. That is why for <code>type</code>, <code>model</code> and <code>sceneRef</code> we have, we are defining them with the <code>['PK', 0, ...</code> format. It allows us to build a composite key from each of those elements, in the defined positions and put it into the PK value without having to manually join them 🥳.</p>
+<p>The <code>hidden</code> property is handy in the sort key here too. It allows us to take other attributes in the entity, <code>path</code> in this case, to determine its value. The usage here lets us turn our <code>path</code> array into another composite key, this time a representation of the scene's node tree structure. Using this path in the sort key like this allows us to query the nodes using <code>begins_with</code> to only grab a subset of the model, which is some awesome functionality which is practically free!</p>
+<h2 id="smooshing-them-together">Smooshing them together</h2>
+<p>We've got the node entity down now. So, let's tackle the others. We have <code>Mesh</code>, <code>Model</code>, <code>Scene</code> and <code>Material</code> which are all quite basic, so I won't cover them. They just contain the data they would normally represent but all of their references are altered to map to correct items in the table.</p>
+<p>The only other interesting part is the <code>Accessor</code> entity. It's in here that we store all of our mesh <code>vertices</code>, <code>normals</code> and <code>indices</code>. For each <code>accessor</code> in the model, I'm using GLTFTransform's <code>getArray</code> method to get the slice of the buffer, then encoding it in <code>Base64</code> and sticking it in the item as a string.</p>
+<p>You may realise the problem with this already, and it's quite annoying. The maximum size for a single item in DynamoDB is 400KB, which means if any of our primitives holds an value greater than that, we can't store it. The problem is certainly not helped by the 33% bloat that using <code>Base64</code> brings to the table. Regardless, there is a solution, and I didn't implement it.</p>
+<p>Meshes are made up of primitives, so if any of your primitives are getting too big, there should be no issue in splitting them up (right !?!). My lack of understanding here is why I've left it hanging. I don't know the implications of splitting the primitives up more. Thankfully though, the scene I was developing with didn't have any massive meshes 🥳.</p>
+<h2 id="popping-a-model-into-the-table">Popping a model into the table</h2>
+<p>With all of our entities being defined in DynamoDB Toolbox, and all of the GLTF elements easily accessible and iterable, writing to the table was as easy as batch writing them:</p>
+<pre data-lang="typescript" style="background-color:#2b303b;color:#c0c5ce;" class="language-typescript "><code class="language-typescript" data-lang="typescript"><span style="color:#bf616a;">private async </span><span style="color:#8fa1b3;">commitMeshes </span><span>(</span><span style="color:#bf616a;">dbEntities</span><span>: </span><span style="color:#bf616a;">Entities</span><span>): </span><span style="color:#ebcb8b;">Promise</span><span>&lt;void&gt; {
+</span><span>    const </span><span style="color:#bf616a;">batchPuts </span><span>= </span><span style="color:#bf616a;">this</span><span>.</span><span style="color:#bf616a;">meshes</span><span>.</span><span style="color:#8fa1b3;">map</span><span>((</span><span style="color:#bf616a;">mesh</span><span>) </span><span style="color:#b48ead;">=&gt; </span><span style="color:#bf616a;">dbEntities</span><span>.</span><span style="color:#bf616a;">MeshEntity</span><span>.</span><span style="color:#8fa1b3;">putBatch</span><span>(</span><span style="color:#bf616a;">mesh</span><span>.</span><span style="color:#8fa1b3;">toItem</span><span>()))
+</span><span>
+</span><span>    await </span><span style="color:#8fa1b3;">chunkRunner</span><span>(</span><span style="color:#bf616a;">batchPuts</span><span>, 25, </span><span style="color:#bf616a;">async</span><span> (</span><span style="color:#bf616a;">batch</span><span>) =&gt; {
+</span><span>        </span><span style="color:#b48ead;">await </span><span style="color:#bf616a;">dbEntities</span><span>.</span><span style="color:#bf616a;">Table</span><span>.</span><span style="color:#8fa1b3;">batchWrite</span><span>(</span><span style="color:#bf616a;">batch</span><span>)
+</span><span>    })
+</span><span>}
+</span></code></pre>
+<h2 id="getting-it-back-out">Getting it back out</h2>
+<p>Getting the back out is a little bit more complicated, we do the following.</p>
+<ol>
+<li>Select a model by name.</li>
+<li>Select a scene by ref that's part of that model.</li>
+<li>Do a query on the nodes of that scene (This is where we can select only a subset, explained in a second).</li>
+<li>Do batch gets on each of the meshes referenced by the nodes.</li>
+<li>Do some more batch gets for each of the materials and primitives.</li>
+<li>Change all of the references in the gltf data to match what they are in the new file as node order will change in dynamo (especially when we're only getting a subset).</li>
+<li>For each of the accessors, decode them from <code>Base64</code>, concatenate the buffers, generate <code>accessor</code> and <code>bufferView</code> objects with correct sizes and re-encode the concatenated buffer back into <code>Base64</code>.</li>
+<li>Take all of the parts and jam them into a gltf object (With typing help from GLTF Transform 🙏).</li>
+</ol>
+<p>As mentioned earlier, in the sort key for the <code>Node</code> entity, we're storing the tree structure of the scene by using the path like so:</p>
+
+<figure>
+    <img alt="A 3D file with visible tree structure" src=".&#x2F;tree.png" width="100%" style="" />
+    <figcaption></figcaption>
+</figure>
+<p>Now, if in my initial query for the nodes in the table does <code>begins_with</code> for <code>0#1</code>, only the <code>torus</code>, <code>cylinder</code> and <code>suzanne</code> will be retrieved!</p>
+<h2 id="implementation-limitations">Implementation limitations</h2>
+<p>It's important to note that my implementation of this is missing some key aspects of the GLTF spec.</p>
+<ul>
+<li>
+<p>Animations are a big one, and I skipped them due to lack of interest. I see no reason why they couldn't be added though.
+As far as I know, animations are stored in buffers in the same way our <code>position</code> and <code>index</code> data are already stored for our primitives.</p>
+</li>
+<li>
+<p>Textures are another chunk I've missed out, and I'm not sure how to handle them. They're stored in buffers too, but images are usually pretty big.
+Bigger than the 400KB item limit imposed by Dynamo.
+So maybe S3 is to come to the rescue for this.
+Obviously not as quick to interact with as Dynamo, but it can handle whatever you throw at it, and it's much more convenient for allowing image modification.</p>
+</li>
+<li>
+<p>Draco is a no go. I don't know how Draco works, and getting this working without Draco was confusing enough. I have doubts over whether Draco could even be possible but would like to have a look into it.</p>
+</li>
+</ul>
+<h2 id="future">Future</h2>
+<p>Besides trying to add what I just mentioned above, I'd like to run through some stuff that would be fun to explore with this.</p>
+<ul>
+<li>
+<p>Keeping a scene stored in the database like this means if we wanted to, we could access all of the node and material data, without having to download the meshes and their primitives.
+This would allow us to arrange a scene, via its nodes, and set the materials on the meshes (still, without downloading them, all we need is to update the mesh ref!).
+And if we were to get the bounding boxes for each of the meshes (Which might be available on the min/max of each primitive), we could represent each of the nodes as cubes generated on the client.</p>
+</li>
+<li>
+<p>Realtime database synchronisation should be possible without much effort. If I was to rotate an object for example, that would be a few bytes of data being set in a Dynamo update.
+Combine that with some websockets syncing, (which would technically be possible without this database system) and you're onto a winner.</p>
+</li>
+<li>
+<p>Huge 3D files could be fun to have a go of.</p>
+</li>
+</ul>
+<h2 id="bad-erd">Bad ERD</h2>
+<p>I made an ERD to try and help explain how this ties together. Idk if it helps 😅.</p>
+
+<figure>
+    <img alt="An ERD representing the structure of the table" src=".&#x2F;GltfERD.png" width="100%" style="" />
+    <figcaption>I wanted an ERD but I hate making them, so this is all you&#x27;re getting</figcaption>
+</figure>
+<hr />
+<p>Only recently started listening to some more Poppy, she's hella weird. Here's a couple of her songs.
+<iframe style="border-radius:12px" src="https:&#x2F;&#x2F;open.spotify.com&#x2F;embed&#x2F;track&#x2F;6KwSYJxD2zqROxBB9mUQ20?utm_source=generator" width="100%" height="152" frameBorder="0" allowfullscreen=""
+    allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" loading="lazy"></iframe>
+<iframe style="border-radius:12px" src="https:&#x2F;&#x2F;open.spotify.com&#x2F;embed&#x2F;track&#x2F;7Bc59U2nhCp608JlIEMEGl?utm_source=generator" width="100%" height="152" frameBorder="0" allowfullscreen=""
+    allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" loading="lazy"></iframe></p>
+
+    </div>
+
+    
+        <footer>
+            <hr>
+            <p>
+                
+                    Published by Samuel Gregson
+                
+                
+                    
+                    in <a href="https://zacxalot.github.io/categories/dynamodb/">DynamoDB</a>
+                
+                
+                    and
+                    tagged
+                    
+                        <a href="https://zacxalot.github.io/tags/dynamodb/">dynamodb</a>
+                        
+                            
+                                
+                                    ,
+                                
+                            
+                        
+                    
+                        <a href="https://zacxalot.github.io/tags/typescript/">typescript</a>
+                        
+                            
+                                
+                                    ,
+                                
+                            
+                        
+                    
+                        <a href="https://zacxalot.github.io/tags/gltf/">gltf</a>
+                        
+                            
+                                
+                                    and
+                                
+                            
+                        
+                    
+                        <a href="https://zacxalot.github.io/tags/3d/">3d</a>
+                        
+                            
+                        
+                    
+                
+            </p>
+            
+            
+        </footer>
+    
+</article>
+
+
+    </body>
+
+</html>

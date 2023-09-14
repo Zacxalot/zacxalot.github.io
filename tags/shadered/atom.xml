@@ -1,0 +1,151 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom" xml:lang="en">
+	<title> - shadered</title>
+	<link href="https://zacxalot.github.io/tags/shadered/atom.xml" rel="self" type="application/atom+xml"/>
+  <link href="https://zacxalot.github.io"/>
+	<generator uri="https://www.getzola.org/">Zola</generator>
+	<updated>2023-03-16T00:00:00+00:00</updated>
+	<id>https://zacxalot.github.io/tags/shadered/atom.xml</id>
+	<entry xml:lang="en">
+		<title>⌗⌗⌗⌗⌗⌗⌗⌗ Grids ⌗⌗⌗⌗⌗⌗⌗⌗</title>
+		<published>2023-03-16T00:00:00+00:00</published>
+		<updated>2023-03-16T00:00:00+00:00</updated>
+		<link rel="alternate" href="https://zacxalot.github.io/flat-blend/8-grids/" type="text/html"/>
+		<id>https://zacxalot.github.io/flat-blend/8-grids/</id>
+		<content type="html">&lt;p&gt;Blender has a grid, I want a grid!
+Blender&#x27;s grid shader is defined in &lt;code&gt;overlay_grid_frag.glsl&lt;&#x2F;code&gt;.
+Whoever made this shader kindly left an explanation of what the code is achieving and a little bit about how it does it at the top, as well as a link to a chapter in &lt;a href=&quot;https:&#x2F;&#x2F;developer.nvidia.com&#x2F;gpugems&#x2F;gpugems2&#x2F;part-iii-high-quality-rendering&#x2F;chapter-22-fast-prefiltered-lines&quot;&gt;Nvidia&#x27;s GPU Gems 2&lt;&#x2F;a&gt; showing a different way to make pre-filtered lines. I had a read of both of these, as well as the shader code, and I was completely stumped!&lt;&#x2F;p&gt;
+&lt;p&gt;So I decided to have a go of implementing it myself from scratch. Before messing about trying to add a new pipeline to the flat-blend code, I downloaded &lt;a href=&quot;https:&#x2F;&#x2F;shadered.org&#x2F;&quot;&gt;SHADERed&lt;&#x2F;a&gt; to let me iterate on my code quicker. SHADERed is like the desktop version of &lt;a href=&quot;https:&#x2F;&#x2F;www.shadertoy.com&#x2F;&quot;&gt;Shadertoy&lt;&#x2F;a&gt;. I really don&#x27;t like the code editor (weird auto brackets, no comment line shortcut and other annoyances), but the rest is extremely useful for trying different things out. There is a VSCode extension for it but that was annoying in a different way 🙃. &lt;&#x2F;p&gt;
+&lt;p&gt;The first part I got working was the large grid squares. I wrote this code to get whether a pixel was part of a grid or not. &lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;glsl&quot; style=&quot;background-color:#2b303b;color:#c0c5ce;&quot; class=&quot;language-glsl &quot;&gt;&lt;code class=&quot;language-glsl&quot; data-lang=&quot;glsl&quot;&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;float &lt;&#x2F;span&gt;&lt;span style=&quot;color:#8fa1b3;&quot;&gt;getGrid&lt;&#x2F;span&gt;&lt;span&gt;(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;vec2 &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;uv&lt;&#x2F;span&gt;&lt;span&gt;,&lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;int &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;size&lt;&#x2F;span&gt;&lt;span&gt;) {
+&lt;&#x2F;span&gt;&lt;span&gt;	&lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;vec2&lt;&#x2F;span&gt;&lt;span&gt; grid = &lt;&#x2F;span&gt;&lt;span style=&quot;color:#96b5b4;&quot;&gt;mod&lt;&#x2F;span&gt;&lt;span&gt;((uv - (uResolution &#x2F; &lt;&#x2F;span&gt;&lt;span style=&quot;color:#d08770;&quot;&gt;2&lt;&#x2F;span&gt;&lt;span&gt;)) - &lt;&#x2F;span&gt;&lt;span style=&quot;color:#d08770;&quot;&gt;0.5&lt;&#x2F;span&gt;&lt;span&gt;,size);
+&lt;&#x2F;span&gt;&lt;span&gt;	&lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;return &lt;&#x2F;span&gt;&lt;span style=&quot;color:#d08770;&quot;&gt;1.0 &lt;&#x2F;span&gt;&lt;span&gt;- (&lt;&#x2F;span&gt;&lt;span style=&quot;color:#96b5b4;&quot;&gt;clamp&lt;&#x2F;span&gt;&lt;span&gt;(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#96b5b4;&quot;&gt;min&lt;&#x2F;span&gt;&lt;span&gt;(grid.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;x&lt;&#x2F;span&gt;&lt;span&gt;, grid.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;y&lt;&#x2F;span&gt;&lt;span&gt;), &lt;&#x2F;span&gt;&lt;span style=&quot;color:#d08770;&quot;&gt;1.0&lt;&#x2F;span&gt;&lt;span&gt;, &lt;&#x2F;span&gt;&lt;span style=&quot;color:#d08770;&quot;&gt;2.0&lt;&#x2F;span&gt;&lt;span&gt;) - &lt;&#x2F;span&gt;&lt;span style=&quot;color:#d08770;&quot;&gt;1.0&lt;&#x2F;span&gt;&lt;span&gt;);
+&lt;&#x2F;span&gt;&lt;span&gt;}
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;I&#x27;m not too proud of it as it seems a bit overcomplicated, but I&#x27;m new to writing shaders so it&#x27;ll probably one I come back to in the future. I&#x27;ll try and break it down though.&lt;&#x2F;p&gt;
+&lt;p&gt;&lt;code&gt;(uv - (uResolution &#x2F; 2)) - 0.5&lt;&#x2F;code&gt; gives us the coordinates of each pixel relative to the centre of the screen which, when projected onto the red and green output channels, looks like this:
+
+&lt;figure&gt;
+    &lt;img alt=&quot;A viewport divided into four sections, green, yellow, black and red&quot; src=&quot;.&amp;#x2F;centre.png&quot; width=&quot;100%&quot; style=&quot;&quot; &#x2F;&gt;
+    &lt;figcaption&gt;&lt;&#x2F;figcaption&gt;
+&lt;&#x2F;figure&gt;&lt;&#x2F;p&gt;
+&lt;p&gt;Then we get the mod of this like so &lt;code&gt;mod((uv - (uResolution &#x2F; 2)) - 0.5,size)&lt;&#x2F;code&gt;, which does a kind of sawtooth pass over our input, splitting it into squares of &lt;code&gt;size&lt;&#x2F;code&gt; width and height, which results in this:
+
+&lt;figure&gt;
+    &lt;img alt=&quot;A viewport divided into yellow squares&quot; src=&quot;.&amp;#x2F;big_grid.png&quot; width=&quot;100%&quot; style=&quot;&quot; &#x2F;&gt;
+    &lt;figcaption&gt;&lt;&#x2F;figcaption&gt;
+&lt;&#x2F;figure&gt;&lt;&#x2F;p&gt;
+&lt;p&gt;You can see from this there are red lines going across the screen and green lines going up. To extract the grid from this we run this &lt;code&gt;1.0 - (clamp(min(grid.x, grid.y), 1.0, 2.0) - 1.0)&lt;&#x2F;code&gt; over it. First we get the &lt;code&gt;min(grid., grid.y)&lt;&#x2F;code&gt; which is where there is only red or only green (all of the yellow is where there is both), then clamp it between &lt;code&gt;1.0&lt;&#x2F;code&gt; and &lt;code&gt;2.0&lt;&#x2F;code&gt;. We then subtract &lt;code&gt;1.0&lt;&#x2F;code&gt; from this to make the actual range of values be between &lt;code&gt;0.0&lt;&#x2F;code&gt; and &lt;code&gt;1.0&lt;&#x2F;code&gt; (This seems a bit convoluted but looked better than other things I tried). Finally, we do &lt;code&gt;1.0 - black_grid&lt;&#x2F;code&gt; to get a white grid with a black background:
+
+&lt;figure&gt;
+    &lt;img alt=&quot;A white grid on a black background&quot; src=&quot;.&amp;#x2F;big.png&quot; width=&quot;100%&quot; style=&quot;&quot; &#x2F;&gt;
+    &lt;figcaption&gt;&lt;&#x2F;figcaption&gt;
+&lt;&#x2F;figure&gt;&lt;&#x2F;p&gt;
+&lt;p&gt;I then run this same function with a size parameter half that of the larger grid to get a grid with squares half of the size. These are then combined like so &lt;code&gt;vec3 grid = vec3(max(big &#x2F; 2, small &#x2F; 8))&lt;&#x2F;code&gt; to produce this:
+
+&lt;figure&gt;
+    &lt;img alt=&quot;A white grid with smaller less bold squares on a black background&quot; src=&quot;.&amp;#x2F;big_and_small.png&quot; width=&quot;100%&quot; style=&quot;&quot; &#x2F;&gt;
+    &lt;figcaption&gt;&lt;&#x2F;figcaption&gt;
+&lt;&#x2F;figure&gt;&lt;&#x2F;p&gt;
+&lt;p&gt;Now it&#x27;s time for the axis! This is where I got stuck trying to re-use my &lt;code&gt;getGrid&lt;&#x2F;code&gt; function in a similar way to how Blender does it, but my implementation was too different, so I ended up making a new &lt;code&gt;getAxis&lt;&#x2F;code&gt; method.&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;glsl&quot; style=&quot;background-color:#2b303b;color:#c0c5ce;&quot; class=&quot;language-glsl &quot;&gt;&lt;code class=&quot;language-glsl&quot; data-lang=&quot;glsl&quot;&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;float &lt;&#x2F;span&gt;&lt;span style=&quot;color:#8fa1b3;&quot;&gt;getAxis&lt;&#x2F;span&gt;&lt;span&gt;(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;vec2 &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;uv&lt;&#x2F;span&gt;&lt;span&gt;, &lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;int &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;axis&lt;&#x2F;span&gt;&lt;span&gt;) {
+&lt;&#x2F;span&gt;&lt;span&gt;	&lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;float&lt;&#x2F;span&gt;&lt;span&gt; line = &lt;&#x2F;span&gt;&lt;span style=&quot;color:#96b5b4;&quot;&gt;abs&lt;&#x2F;span&gt;&lt;span&gt;(((uv[axis] + &lt;&#x2F;span&gt;&lt;span style=&quot;color:#d08770;&quot;&gt;0.5&lt;&#x2F;span&gt;&lt;span&gt;) - (uResolution[axis]&#x2F;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#d08770;&quot;&gt;2&lt;&#x2F;span&gt;&lt;span&gt;))&#x2F;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#d08770;&quot;&gt;5&lt;&#x2F;span&gt;&lt;span&gt;);
+&lt;&#x2F;span&gt;&lt;span&gt;	&lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;return &lt;&#x2F;span&gt;&lt;span style=&quot;color:#96b5b4;&quot;&gt;clamp&lt;&#x2F;span&gt;&lt;span&gt;(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#d08770;&quot;&gt;1.0 &lt;&#x2F;span&gt;&lt;span&gt;- line, &lt;&#x2F;span&gt;&lt;span style=&quot;color:#d08770;&quot;&gt;0.0&lt;&#x2F;span&gt;&lt;span&gt;, &lt;&#x2F;span&gt;&lt;span style=&quot;color:#d08770;&quot;&gt;1.0&lt;&#x2F;span&gt;&lt;span&gt;);
+&lt;&#x2F;span&gt;&lt;span&gt;}
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;This operates on a similar principal to the get grid but operates on only one axis at a time, and instead of performing a &lt;code&gt;mod&lt;&#x2F;code&gt;, the output is divided and &lt;code&gt;abs&lt;&#x2F;code&gt;&#x27;ed to give a gradient along the axis like this:
+
+&lt;figure&gt;
+    &lt;img alt=&quot;A white line along the y axis&quot; src=&quot;.&amp;#x2F;y_axis.png&quot; width=&quot;100%&quot; style=&quot;&quot; &#x2F;&gt;
+    &lt;figcaption&gt;&lt;&#x2F;figcaption&gt;
+&lt;&#x2F;figure&gt;&lt;&#x2F;p&gt;
+&lt;p&gt;If we run this for the other axis, and assign each to their respective colour channels like so &lt;code&gt;vec3 axis = vec3(xAxis, yAxis, 0.0);&lt;&#x2F;code&gt;, we get our axis!
+
+&lt;figure&gt;
+    &lt;img alt=&quot;Red and green x and y axis&quot; src=&quot;.&amp;#x2F;axis.png&quot; width=&quot;100%&quot; style=&quot;&quot; &#x2F;&gt;
+    &lt;figcaption&gt;&lt;&#x2F;figcaption&gt;
+&lt;&#x2F;figure&gt;&lt;&#x2F;p&gt;
+&lt;p&gt;Then, all we do is combine that with the grid we had from before to get out final output 🥳
+
+&lt;figure&gt;
+    &lt;img alt=&quot;A grid with all previously described elements on it&quot; src=&quot;.&amp;#x2F;complete_grid.png&quot; width=&quot;100%&quot; style=&quot;&quot; &#x2F;&gt;
+    &lt;figcaption&gt;&lt;&#x2F;figcaption&gt;
+&lt;&#x2F;figure&gt;&lt;&#x2F;p&gt;
+&lt;p&gt;Here is the final fragment shader&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;glsl&quot; style=&quot;background-color:#2b303b;color:#c0c5ce;&quot; class=&quot;language-glsl &quot;&gt;&lt;code class=&quot;language-glsl&quot; data-lang=&quot;glsl&quot;&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;#version&lt;&#x2F;span&gt;&lt;span&gt; 330
+&lt;&#x2F;span&gt;&lt;span&gt;
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;uniform vec2&lt;&#x2F;span&gt;&lt;span&gt; uResolution;
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;out vec4&lt;&#x2F;span&gt;&lt;span&gt; outColor;
+&lt;&#x2F;span&gt;&lt;span&gt;
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;int&lt;&#x2F;span&gt;&lt;span&gt; squareSize = &lt;&#x2F;span&gt;&lt;span style=&quot;color:#d08770;&quot;&gt;160&lt;&#x2F;span&gt;&lt;span&gt;;
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;int&lt;&#x2F;span&gt;&lt;span&gt; smallSquareSize = squareSize &#x2F; &lt;&#x2F;span&gt;&lt;span style=&quot;color:#d08770;&quot;&gt;2&lt;&#x2F;span&gt;&lt;span&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;float &lt;&#x2F;span&gt;&lt;span style=&quot;color:#8fa1b3;&quot;&gt;getGrid&lt;&#x2F;span&gt;&lt;span&gt;(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;vec2 &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;uv&lt;&#x2F;span&gt;&lt;span&gt;,&lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;int &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;size&lt;&#x2F;span&gt;&lt;span&gt;) {
+&lt;&#x2F;span&gt;&lt;span&gt;	&lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;vec2&lt;&#x2F;span&gt;&lt;span&gt; grid = &lt;&#x2F;span&gt;&lt;span style=&quot;color:#96b5b4;&quot;&gt;mod&lt;&#x2F;span&gt;&lt;span&gt;((uv - (uResolution &#x2F; &lt;&#x2F;span&gt;&lt;span style=&quot;color:#d08770;&quot;&gt;2&lt;&#x2F;span&gt;&lt;span&gt;)) - &lt;&#x2F;span&gt;&lt;span style=&quot;color:#d08770;&quot;&gt;0.5&lt;&#x2F;span&gt;&lt;span&gt;,size);
+&lt;&#x2F;span&gt;&lt;span&gt;	&lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;return &lt;&#x2F;span&gt;&lt;span style=&quot;color:#d08770;&quot;&gt;1.0 &lt;&#x2F;span&gt;&lt;span&gt;- (&lt;&#x2F;span&gt;&lt;span style=&quot;color:#96b5b4;&quot;&gt;clamp&lt;&#x2F;span&gt;&lt;span&gt;(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#96b5b4;&quot;&gt;min&lt;&#x2F;span&gt;&lt;span&gt;(grid.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;x&lt;&#x2F;span&gt;&lt;span&gt;, grid.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;y&lt;&#x2F;span&gt;&lt;span&gt;), &lt;&#x2F;span&gt;&lt;span style=&quot;color:#d08770;&quot;&gt;1.0&lt;&#x2F;span&gt;&lt;span&gt;, &lt;&#x2F;span&gt;&lt;span style=&quot;color:#d08770;&quot;&gt;2.0&lt;&#x2F;span&gt;&lt;span&gt;) - &lt;&#x2F;span&gt;&lt;span style=&quot;color:#d08770;&quot;&gt;1.0&lt;&#x2F;span&gt;&lt;span&gt;);
+&lt;&#x2F;span&gt;&lt;span&gt;}
+&lt;&#x2F;span&gt;&lt;span&gt;
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;float &lt;&#x2F;span&gt;&lt;span style=&quot;color:#8fa1b3;&quot;&gt;getAxis&lt;&#x2F;span&gt;&lt;span&gt;(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;vec2 &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;uv&lt;&#x2F;span&gt;&lt;span&gt;, &lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;int &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;axis&lt;&#x2F;span&gt;&lt;span&gt;) {
+&lt;&#x2F;span&gt;&lt;span&gt;	&lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;float&lt;&#x2F;span&gt;&lt;span&gt; line = &lt;&#x2F;span&gt;&lt;span style=&quot;color:#96b5b4;&quot;&gt;abs&lt;&#x2F;span&gt;&lt;span&gt;(((uv[axis] + &lt;&#x2F;span&gt;&lt;span style=&quot;color:#d08770;&quot;&gt;0.5&lt;&#x2F;span&gt;&lt;span&gt;) - (uResolution[axis]&#x2F;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#d08770;&quot;&gt;2&lt;&#x2F;span&gt;&lt;span&gt;))&#x2F;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#d08770;&quot;&gt;4&lt;&#x2F;span&gt;&lt;span&gt;);
+&lt;&#x2F;span&gt;&lt;span&gt;	&lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;return &lt;&#x2F;span&gt;&lt;span style=&quot;color:#96b5b4;&quot;&gt;clamp&lt;&#x2F;span&gt;&lt;span&gt;(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#d08770;&quot;&gt;1.0 &lt;&#x2F;span&gt;&lt;span&gt;- line, &lt;&#x2F;span&gt;&lt;span style=&quot;color:#d08770;&quot;&gt;0.0&lt;&#x2F;span&gt;&lt;span&gt;, &lt;&#x2F;span&gt;&lt;span style=&quot;color:#d08770;&quot;&gt;1.0&lt;&#x2F;span&gt;&lt;span&gt;);
+&lt;&#x2F;span&gt;&lt;span&gt;}
+&lt;&#x2F;span&gt;&lt;span&gt;
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;void &lt;&#x2F;span&gt;&lt;span style=&quot;color:#8fa1b3;&quot;&gt;main&lt;&#x2F;span&gt;&lt;span&gt;() {	
+&lt;&#x2F;span&gt;&lt;span&gt;	&lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;float&lt;&#x2F;span&gt;&lt;span&gt; big = &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;getGrid&lt;&#x2F;span&gt;&lt;span&gt;(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;gl_FragCoord&lt;&#x2F;span&gt;&lt;span&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;xy&lt;&#x2F;span&gt;&lt;span&gt;, squareSize);
+&lt;&#x2F;span&gt;&lt;span&gt;	&lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;float&lt;&#x2F;span&gt;&lt;span&gt; small = &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;getGrid&lt;&#x2F;span&gt;&lt;span&gt;(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;gl_FragCoord&lt;&#x2F;span&gt;&lt;span&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;xy&lt;&#x2F;span&gt;&lt;span&gt;, smallSquareSize);
+&lt;&#x2F;span&gt;&lt;span&gt;	&lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;float&lt;&#x2F;span&gt;&lt;span&gt; xAxis = &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;getAxis&lt;&#x2F;span&gt;&lt;span&gt;(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;gl_FragCoord&lt;&#x2F;span&gt;&lt;span&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;xy&lt;&#x2F;span&gt;&lt;span&gt;, &lt;&#x2F;span&gt;&lt;span style=&quot;color:#d08770;&quot;&gt;1&lt;&#x2F;span&gt;&lt;span&gt;);
+&lt;&#x2F;span&gt;&lt;span&gt;	&lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;float&lt;&#x2F;span&gt;&lt;span&gt; yAxis = &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;getAxis&lt;&#x2F;span&gt;&lt;span&gt;(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;gl_FragCoord&lt;&#x2F;span&gt;&lt;span&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;xy&lt;&#x2F;span&gt;&lt;span&gt;, &lt;&#x2F;span&gt;&lt;span style=&quot;color:#d08770;&quot;&gt;0&lt;&#x2F;span&gt;&lt;span&gt;);
+&lt;&#x2F;span&gt;&lt;span&gt;
+&lt;&#x2F;span&gt;&lt;span&gt;	&lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;vec3&lt;&#x2F;span&gt;&lt;span&gt; axis = &lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;vec3&lt;&#x2F;span&gt;&lt;span&gt;(xAxis, yAxis, &lt;&#x2F;span&gt;&lt;span style=&quot;color:#d08770;&quot;&gt;0.0&lt;&#x2F;span&gt;&lt;span&gt;);
+&lt;&#x2F;span&gt;&lt;span&gt;	&lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;vec3&lt;&#x2F;span&gt;&lt;span&gt; grid = &lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;vec3&lt;&#x2F;span&gt;&lt;span&gt;(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#96b5b4;&quot;&gt;max&lt;&#x2F;span&gt;&lt;span&gt;(big &#x2F; &lt;&#x2F;span&gt;&lt;span style=&quot;color:#d08770;&quot;&gt;2&lt;&#x2F;span&gt;&lt;span&gt;, small &#x2F; &lt;&#x2F;span&gt;&lt;span style=&quot;color:#d08770;&quot;&gt;8&lt;&#x2F;span&gt;&lt;span&gt;));
+&lt;&#x2F;span&gt;&lt;span&gt;
+&lt;&#x2F;span&gt;&lt;span&gt;	&lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;vec3&lt;&#x2F;span&gt;&lt;span&gt; gridCol = &lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;vec3&lt;&#x2F;span&gt;&lt;span&gt;(grid);
+&lt;&#x2F;span&gt;&lt;span&gt;
+&lt;&#x2F;span&gt;&lt;span&gt;	&lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;float&lt;&#x2F;span&gt;&lt;span&gt; mask = &lt;&#x2F;span&gt;&lt;span style=&quot;color:#96b5b4;&quot;&gt;max&lt;&#x2F;span&gt;&lt;span&gt;(axis.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;x&lt;&#x2F;span&gt;&lt;span&gt;, axis.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;y&lt;&#x2F;span&gt;&lt;span&gt;);
+&lt;&#x2F;span&gt;&lt;span&gt;
+&lt;&#x2F;span&gt;&lt;span&gt;	outColor = &lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;vec4&lt;&#x2F;span&gt;&lt;span&gt;(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#96b5b4;&quot;&gt;mix&lt;&#x2F;span&gt;&lt;span&gt;(grid , axis, mask), &lt;&#x2F;span&gt;&lt;span style=&quot;color:#d08770;&quot;&gt;0.0&lt;&#x2F;span&gt;&lt;span&gt;);
+&lt;&#x2F;span&gt;&lt;span&gt;}
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;h2 id=&quot;implementing-on-flat-blend&quot;&gt;Implementing on flat-blend&lt;&#x2F;h2&gt;
+&lt;p&gt;Thanks to all of the refactoring I had done previously, adding in another render pass was pretty easy! Everything was pretty much a copy of the other render pass, besides using these vertices to cover the whole screen (and having nothing to do in the vertex shader).&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;rust&quot; style=&quot;background-color:#2b303b;color:#c0c5ce;&quot; class=&quot;language-rust &quot;&gt;&lt;code class=&quot;language-rust&quot; data-lang=&quot;rust&quot;&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;let&lt;&#x2F;span&gt;&lt;span&gt; grid_vertices: Vec&amp;lt;Vertex&amp;gt; = vec![
+&lt;&#x2F;span&gt;&lt;span&gt;    Vertex {
+&lt;&#x2F;span&gt;&lt;span&gt;        position: [-&lt;&#x2F;span&gt;&lt;span style=&quot;color:#d08770;&quot;&gt;1.0&lt;&#x2F;span&gt;&lt;span&gt;, -&lt;&#x2F;span&gt;&lt;span style=&quot;color:#d08770;&quot;&gt;1.0&lt;&#x2F;span&gt;&lt;span&gt;],
+&lt;&#x2F;span&gt;&lt;span&gt;    },
+&lt;&#x2F;span&gt;&lt;span&gt;    Vertex {
+&lt;&#x2F;span&gt;&lt;span&gt;        position: [&lt;&#x2F;span&gt;&lt;span style=&quot;color:#d08770;&quot;&gt;1.0&lt;&#x2F;span&gt;&lt;span&gt;, -&lt;&#x2F;span&gt;&lt;span style=&quot;color:#d08770;&quot;&gt;1.0&lt;&#x2F;span&gt;&lt;span&gt;],
+&lt;&#x2F;span&gt;&lt;span&gt;    },
+&lt;&#x2F;span&gt;&lt;span&gt;    Vertex {
+&lt;&#x2F;span&gt;&lt;span&gt;        position: [-&lt;&#x2F;span&gt;&lt;span style=&quot;color:#d08770;&quot;&gt;1.0&lt;&#x2F;span&gt;&lt;span&gt;, &lt;&#x2F;span&gt;&lt;span style=&quot;color:#d08770;&quot;&gt;1.0&lt;&#x2F;span&gt;&lt;span&gt;],
+&lt;&#x2F;span&gt;&lt;span&gt;    },
+&lt;&#x2F;span&gt;&lt;span&gt;    Vertex {
+&lt;&#x2F;span&gt;&lt;span&gt;        position: [&lt;&#x2F;span&gt;&lt;span style=&quot;color:#d08770;&quot;&gt;1.0&lt;&#x2F;span&gt;&lt;span&gt;, -&lt;&#x2F;span&gt;&lt;span style=&quot;color:#d08770;&quot;&gt;1.0&lt;&#x2F;span&gt;&lt;span&gt;],
+&lt;&#x2F;span&gt;&lt;span&gt;    },
+&lt;&#x2F;span&gt;&lt;span&gt;    Vertex {
+&lt;&#x2F;span&gt;&lt;span&gt;        position: [-&lt;&#x2F;span&gt;&lt;span style=&quot;color:#d08770;&quot;&gt;1.0&lt;&#x2F;span&gt;&lt;span&gt;, &lt;&#x2F;span&gt;&lt;span style=&quot;color:#d08770;&quot;&gt;1.0&lt;&#x2F;span&gt;&lt;span&gt;],
+&lt;&#x2F;span&gt;&lt;span&gt;    },
+&lt;&#x2F;span&gt;&lt;span&gt;    Vertex {
+&lt;&#x2F;span&gt;&lt;span&gt;        position: [&lt;&#x2F;span&gt;&lt;span style=&quot;color:#d08770;&quot;&gt;1.0&lt;&#x2F;span&gt;&lt;span&gt;, &lt;&#x2F;span&gt;&lt;span style=&quot;color:#d08770;&quot;&gt;1.0&lt;&#x2F;span&gt;&lt;span&gt;],
+&lt;&#x2F;span&gt;&lt;span&gt;    },
+&lt;&#x2F;span&gt;&lt;span&gt;];
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;The other render pass also had to be changed to write over the grid, but all that took was changing a value from &lt;code&gt;Clear&lt;&#x2F;code&gt; to &lt;code&gt;Load&lt;&#x2F;code&gt;.&lt;&#x2F;p&gt;
+&lt;p&gt;With these changes, we end up with our pink square on a grid 💃
+
+&lt;figure&gt;
+    &lt;img alt=&quot;The same grid as before, now with a pink square on it&quot; src=&quot;.&amp;#x2F;flat-blend.png&quot; width=&quot;100%&quot; style=&quot;&quot; &#x2F;&gt;
+    &lt;figcaption&gt;&lt;&#x2F;figcaption&gt;
+&lt;&#x2F;figure&gt;&lt;&#x2F;p&gt;
+&lt;p&gt;This reveals a few issues:&lt;&#x2F;p&gt;
+&lt;ol&gt;
+&lt;li&gt;The grid size doesn&#x27;t mean anything in comparison to the size of the square because the square is being scaled but the size of the grid is fixed.&lt;&#x2F;li&gt;
+&lt;li&gt;There&#x27;s no way to shift the position of the &amp;quot;camera&amp;quot; in relation to the grid or the square.&lt;&#x2F;li&gt;
+&lt;li&gt;The grid is also off centre anyway because I&#x27;ve not added a uniform to input the viewport resolution.&lt;&#x2F;li&gt;
+&lt;&#x2F;ol&gt;
+&lt;p&gt;These are all things that need to be addressed. But I think the first I want to take care of is the camera positioning, which means it&#x27;s time to start putting our meshes into &amp;quot;objects&amp;quot; 👻. That&#x27;s for another time though, this has already taken ages for me to figure out!&lt;&#x2F;p&gt;
+&lt;hr &#x2F;&gt;
+&lt;p&gt;&lt;code&gt;Movin&#x27; Out&lt;&#x2F;code&gt; by &lt;code&gt;Billy Joel&lt;&#x2F;code&gt; is today&#x27;s song. My spreadsheets tell my I&#x27;ll be able to afford a house by mid-2025, so I&#x27;ll have to wait a bit to share the feeling.&lt;&#x2F;p&gt;
+&lt;iframe style=&quot;border-radius:12px&quot; src=&quot;https:&amp;#x2F;&amp;#x2F;open.spotify.com&amp;#x2F;embed&amp;#x2F;track&amp;#x2F;16GUMo6u3D2qo9a19AkYct?utm_source=generator&quot; width=&quot;100%&quot; height=&quot;152&quot; frameBorder=&quot;0&quot; allowfullscreen=&quot;&quot;
+    allow=&quot;autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture&quot; loading=&quot;lazy&quot;&gt;&lt;&#x2F;iframe&gt;</content>
+	</entry>
+</feed>

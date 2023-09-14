@@ -1,0 +1,134 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom" xml:lang="en">
+	<title> - typescript</title>
+	<link href="https://zacxalot.github.io/tags/typescript/atom.xml" rel="self" type="application/atom+xml"/>
+  <link href="https://zacxalot.github.io"/>
+	<generator uri="https://www.getzola.org/">Zola</generator>
+	<updated>2023-09-14T00:00:00+00:00</updated>
+	<id>https://zacxalot.github.io/tags/typescript/atom.xml</id>
+	<entry xml:lang="en">
+		<title>Putting GLTF into DynamoDB</title>
+		<published>2023-09-14T00:00:00+00:00</published>
+		<updated>2023-09-14T00:00:00+00:00</updated>
+		<link rel="alternate" href="https://zacxalot.github.io/gltf/10-gltf-in-dynamo/" type="text/html"/>
+		<id>https://zacxalot.github.io/gltf/10-gltf-in-dynamo/</id>
+		<content type="html">&lt;img src=&quot;header.png&quot; style=&quot;display: none&quot;&#x2F;&gt;
+&lt;p&gt;Since finding out GLTF was just glorified JSON, I&#x27;ve been curious about what storing it in DynamoDB would be like and if it was possible.&lt;&#x2F;p&gt;
+&lt;h2 id=&quot;gltf-transform&quot;&gt;GLTF Transform!&lt;&#x2F;h2&gt;
+&lt;p&gt;So, GLTF is just a JSON file full of all of our 3D data so we could go through it and read it all ourselves, but &lt;a href=&quot;https:&#x2F;&#x2F;www.npmjs.com&#x2F;package&#x2F;@gltf-transform&#x2F;core&quot;&gt;GLTF Transform&lt;&#x2F;a&gt; is a lovely package that makes dealing with it much nicer (Developed by the legendary &lt;a href=&quot;https:&#x2F;&#x2F;www.donmccurdy.com&#x2F;&quot;&gt;Don McCurdy&lt;&#x2F;a&gt;)&lt;&#x2F;p&gt;
+&lt;p&gt;I&#x27;ve not much more to say about it really, other than it made this project much easier, especially when it came to separating data from the buffers.&lt;&#x2F;p&gt;
+&lt;h2 id=&quot;dynamodb-and-toolbox&quot;&gt;DynamoDB and Toolbox!&lt;&#x2F;h2&gt;
+&lt;p&gt;A super handy tool that I&#x27;m slowly growing to love, and one that I&#x27;ve used in this project, is &lt;a href=&quot;https:&#x2F;&#x2F;www.npmjs.com&#x2F;package&#x2F;dynamodb-toolbox&quot;&gt;DynamoDB Toolbox&lt;&#x2F;a&gt;.
+It helps with single table designs (which is what I&#x27;m using here 😉), allowing you to define a table schema, giving you beautifully typed interfaces to interact with Dynamo with.&lt;&#x2F;p&gt;
+&lt;p&gt;It&#x27;s best to show you with an example.
+Here is the entity definition for a GLTF node in the final code.&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;typescript&quot; style=&quot;background-color:#2b303b;color:#c0c5ce;&quot; class=&quot;language-typescript &quot;&gt;&lt;code class=&quot;language-typescript&quot; data-lang=&quot;typescript&quot;&gt;&lt;span&gt;new Entity({
+&lt;&#x2F;span&gt;&lt;span&gt;    name: &amp;#39;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#a3be8c;&quot;&gt;Node&lt;&#x2F;span&gt;&lt;span&gt;&amp;#39;,
+&lt;&#x2F;span&gt;&lt;span&gt;    attributes: {
+&lt;&#x2F;span&gt;&lt;span&gt;        PK: { partitionKey: &lt;&#x2F;span&gt;&lt;span style=&quot;color:#d08770;&quot;&gt;true&lt;&#x2F;span&gt;&lt;span&gt;, hidden: &lt;&#x2F;span&gt;&lt;span style=&quot;color:#d08770;&quot;&gt;true&lt;&#x2F;span&gt;&lt;span&gt;, delimiter: &amp;#39;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#a3be8c;&quot;&gt;#&lt;&#x2F;span&gt;&lt;span&gt;&amp;#39; },
+&lt;&#x2F;span&gt;&lt;span&gt;        SK: { sortKey: &lt;&#x2F;span&gt;&lt;span style=&quot;color:#d08770;&quot;&gt;true&lt;&#x2F;span&gt;&lt;span&gt;, hidden: &lt;&#x2F;span&gt;&lt;span style=&quot;color:#d08770;&quot;&gt;true&lt;&#x2F;span&gt;&lt;span&gt;, type: &amp;#39;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#a3be8c;&quot;&gt;string&lt;&#x2F;span&gt;&lt;span&gt;&amp;#39;, &lt;&#x2F;span&gt;&lt;span style=&quot;color:#8fa1b3;&quot;&gt;default&lt;&#x2F;span&gt;&lt;span&gt;: (&lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;entity&lt;&#x2F;span&gt;&lt;span&gt;: any) &lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;=&amp;gt; &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;entity&lt;&#x2F;span&gt;&lt;span&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;path&lt;&#x2F;span&gt;&lt;span&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#96b5b4;&quot;&gt;join&lt;&#x2F;span&gt;&lt;span&gt;(&amp;#39;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#a3be8c;&quot;&gt;#&lt;&#x2F;span&gt;&lt;span&gt;&amp;#39;) },
+&lt;&#x2F;span&gt;&lt;span&gt;
+&lt;&#x2F;span&gt;&lt;span&gt;        path: { required: &lt;&#x2F;span&gt;&lt;span style=&quot;color:#d08770;&quot;&gt;true&lt;&#x2F;span&gt;&lt;span&gt;, type: &amp;#39;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#a3be8c;&quot;&gt;list&lt;&#x2F;span&gt;&lt;span&gt;&amp;#39; },
+&lt;&#x2F;span&gt;&lt;span&gt;
+&lt;&#x2F;span&gt;&lt;span&gt;        type: [&amp;#39;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#a3be8c;&quot;&gt;PK&lt;&#x2F;span&gt;&lt;span&gt;&amp;#39;, &lt;&#x2F;span&gt;&lt;span style=&quot;color:#d08770;&quot;&gt;0&lt;&#x2F;span&gt;&lt;span&gt;, { type: &amp;#39;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#a3be8c;&quot;&gt;string&lt;&#x2F;span&gt;&lt;span&gt;&amp;#39;, required: &lt;&#x2F;span&gt;&lt;span style=&quot;color:#d08770;&quot;&gt;true&lt;&#x2F;span&gt;&lt;span&gt;, hidden: &lt;&#x2F;span&gt;&lt;span style=&quot;color:#d08770;&quot;&gt;true&lt;&#x2F;span&gt;&lt;span&gt;, &lt;&#x2F;span&gt;&lt;span style=&quot;color:#8fa1b3;&quot;&gt;default&lt;&#x2F;span&gt;&lt;span&gt;: () &lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;=&amp;gt; &lt;&#x2F;span&gt;&lt;span&gt;&amp;#39;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#a3be8c;&quot;&gt;Node&lt;&#x2F;span&gt;&lt;span&gt;&amp;#39; }],
+&lt;&#x2F;span&gt;&lt;span&gt;        model: [&amp;#39;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#a3be8c;&quot;&gt;PK&lt;&#x2F;span&gt;&lt;span&gt;&amp;#39;, &lt;&#x2F;span&gt;&lt;span style=&quot;color:#d08770;&quot;&gt;1&lt;&#x2F;span&gt;&lt;span&gt;, { type: &amp;#39;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#a3be8c;&quot;&gt;string&lt;&#x2F;span&gt;&lt;span&gt;&amp;#39;, required: &lt;&#x2F;span&gt;&lt;span style=&quot;color:#d08770;&quot;&gt;true &lt;&#x2F;span&gt;&lt;span&gt;}],
+&lt;&#x2F;span&gt;&lt;span&gt;        sceneRef: [&amp;#39;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#a3be8c;&quot;&gt;PK&lt;&#x2F;span&gt;&lt;span&gt;&amp;#39;, &lt;&#x2F;span&gt;&lt;span style=&quot;color:#d08770;&quot;&gt;2&lt;&#x2F;span&gt;&lt;span&gt;, { type: &amp;#39;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#a3be8c;&quot;&gt;number&lt;&#x2F;span&gt;&lt;span&gt;&amp;#39;, required: &lt;&#x2F;span&gt;&lt;span style=&quot;color:#d08770;&quot;&gt;true &lt;&#x2F;span&gt;&lt;span&gt;}],
+&lt;&#x2F;span&gt;&lt;span&gt;
+&lt;&#x2F;span&gt;&lt;span&gt;        ref: { type: &amp;#39;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#a3be8c;&quot;&gt;number&lt;&#x2F;span&gt;&lt;span&gt;&amp;#39;, required: &lt;&#x2F;span&gt;&lt;span style=&quot;color:#d08770;&quot;&gt;true &lt;&#x2F;span&gt;&lt;span&gt;},
+&lt;&#x2F;span&gt;&lt;span&gt;
+&lt;&#x2F;span&gt;&lt;span&gt;        name: { type: &amp;#39;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#a3be8c;&quot;&gt;string&lt;&#x2F;span&gt;&lt;span&gt;&amp;#39;, required: &lt;&#x2F;span&gt;&lt;span style=&quot;color:#d08770;&quot;&gt;false &lt;&#x2F;span&gt;&lt;span&gt;},
+&lt;&#x2F;span&gt;&lt;span&gt;        children: { type: &amp;#39;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#a3be8c;&quot;&gt;list&lt;&#x2F;span&gt;&lt;span&gt;&amp;#39;, required: &lt;&#x2F;span&gt;&lt;span style=&quot;color:#d08770;&quot;&gt;false &lt;&#x2F;span&gt;&lt;span&gt;},
+&lt;&#x2F;span&gt;&lt;span&gt;        meshRef: { type: &amp;#39;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#a3be8c;&quot;&gt;number&lt;&#x2F;span&gt;&lt;span&gt;&amp;#39;, required: &lt;&#x2F;span&gt;&lt;span style=&quot;color:#d08770;&quot;&gt;false &lt;&#x2F;span&gt;&lt;span&gt;},
+&lt;&#x2F;span&gt;&lt;span&gt;        rootNodeRefs: { type: &amp;#39;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#a3be8c;&quot;&gt;list&lt;&#x2F;span&gt;&lt;span&gt;&amp;#39;, required: &lt;&#x2F;span&gt;&lt;span style=&quot;color:#d08770;&quot;&gt;true &lt;&#x2F;span&gt;&lt;span&gt;},
+&lt;&#x2F;span&gt;&lt;span&gt;
+&lt;&#x2F;span&gt;&lt;span&gt;        data: { type: &amp;#39;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#a3be8c;&quot;&gt;map&lt;&#x2F;span&gt;&lt;span&gt;&amp;#39;, required: &lt;&#x2F;span&gt;&lt;span style=&quot;color:#d08770;&quot;&gt;true &lt;&#x2F;span&gt;&lt;span&gt;}
+&lt;&#x2F;span&gt;&lt;span&gt;    },
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;table
+&lt;&#x2F;span&gt;&lt;span&gt;} &lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;as const&lt;&#x2F;span&gt;&lt;span&gt;)
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;Here, each key maps to a key in our final Dynamo item, but each value determines what we can put in the value for that key. There&#x27;s obviously &lt;code&gt;type&lt;&#x2F;code&gt;, which maps directly to base typescript types, although less helpful when working with maps and lists. We have &lt;code&gt;required&lt;&#x2F;code&gt;, which gives our resulting property a little &lt;code&gt;?&lt;&#x2F;code&gt; if it&#x27;s false.&lt;&#x2F;p&gt;
+&lt;p&gt;We then get to the &lt;code&gt;hidden&lt;&#x2F;code&gt; property. This allows is to hide the property in the resulting type but keep it in the record. This only works if we have a way of toolbox letting toolbox figure out what the value should be, however. That is why for &lt;code&gt;type&lt;&#x2F;code&gt;, &lt;code&gt;model&lt;&#x2F;code&gt; and &lt;code&gt;sceneRef&lt;&#x2F;code&gt; we have, we are defining them with the &lt;code&gt;[&#x27;PK&#x27;, 0, ...&lt;&#x2F;code&gt; format. It allows us to build a composite key from each of those elements, in the defined positions and put it into the PK value without having to manually join them 🥳.&lt;&#x2F;p&gt;
+&lt;p&gt;The &lt;code&gt;hidden&lt;&#x2F;code&gt; property is handy in the sort key here too. It allows us to take other attributes in the entity, &lt;code&gt;path&lt;&#x2F;code&gt; in this case, to determine its value. The usage here lets us turn our &lt;code&gt;path&lt;&#x2F;code&gt; array into another composite key, this time a representation of the scene&#x27;s node tree structure. Using this path in the sort key like this allows us to query the nodes using &lt;code&gt;begins_with&lt;&#x2F;code&gt; to only grab a subset of the model, which is some awesome functionality which is practically free!&lt;&#x2F;p&gt;
+&lt;h2 id=&quot;smooshing-them-together&quot;&gt;Smooshing them together&lt;&#x2F;h2&gt;
+&lt;p&gt;We&#x27;ve got the node entity down now. So, let&#x27;s tackle the others. We have &lt;code&gt;Mesh&lt;&#x2F;code&gt;, &lt;code&gt;Model&lt;&#x2F;code&gt;, &lt;code&gt;Scene&lt;&#x2F;code&gt; and &lt;code&gt;Material&lt;&#x2F;code&gt; which are all quite basic, so I won&#x27;t cover them. They just contain the data they would normally represent but all of their references are altered to map to correct items in the table.&lt;&#x2F;p&gt;
+&lt;p&gt;The only other interesting part is the &lt;code&gt;Accessor&lt;&#x2F;code&gt; entity. It&#x27;s in here that we store all of our mesh &lt;code&gt;vertices&lt;&#x2F;code&gt;, &lt;code&gt;normals&lt;&#x2F;code&gt; and &lt;code&gt;indices&lt;&#x2F;code&gt;. For each &lt;code&gt;accessor&lt;&#x2F;code&gt; in the model, I&#x27;m using GLTFTransform&#x27;s &lt;code&gt;getArray&lt;&#x2F;code&gt; method to get the slice of the buffer, then encoding it in &lt;code&gt;Base64&lt;&#x2F;code&gt; and sticking it in the item as a string.&lt;&#x2F;p&gt;
+&lt;p&gt;You may realise the problem with this already, and it&#x27;s quite annoying. The maximum size for a single item in DynamoDB is 400KB, which means if any of our primitives holds an value greater than that, we can&#x27;t store it. The problem is certainly not helped by the 33% bloat that using &lt;code&gt;Base64&lt;&#x2F;code&gt; brings to the table. Regardless, there is a solution, and I didn&#x27;t implement it.&lt;&#x2F;p&gt;
+&lt;p&gt;Meshes are made up of primitives, so if any of your primitives are getting too big, there should be no issue in splitting them up (right !?!). My lack of understanding here is why I&#x27;ve left it hanging. I don&#x27;t know the implications of splitting the primitives up more. Thankfully though, the scene I was developing with didn&#x27;t have any massive meshes 🥳.&lt;&#x2F;p&gt;
+&lt;h2 id=&quot;popping-a-model-into-the-table&quot;&gt;Popping a model into the table&lt;&#x2F;h2&gt;
+&lt;p&gt;With all of our entities being defined in DynamoDB Toolbox, and all of the GLTF elements easily accessible and iterable, writing to the table was as easy as batch writing them:&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;typescript&quot; style=&quot;background-color:#2b303b;color:#c0c5ce;&quot; class=&quot;language-typescript &quot;&gt;&lt;code class=&quot;language-typescript&quot; data-lang=&quot;typescript&quot;&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;private async &lt;&#x2F;span&gt;&lt;span style=&quot;color:#8fa1b3;&quot;&gt;commitMeshes &lt;&#x2F;span&gt;&lt;span&gt;(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;dbEntities&lt;&#x2F;span&gt;&lt;span&gt;: &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;Entities&lt;&#x2F;span&gt;&lt;span&gt;): &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ebcb8b;&quot;&gt;Promise&lt;&#x2F;span&gt;&lt;span&gt;&amp;lt;void&amp;gt; {
+&lt;&#x2F;span&gt;&lt;span&gt;    const &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;batchPuts &lt;&#x2F;span&gt;&lt;span&gt;= &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;this&lt;&#x2F;span&gt;&lt;span&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;meshes&lt;&#x2F;span&gt;&lt;span&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#8fa1b3;&quot;&gt;map&lt;&#x2F;span&gt;&lt;span&gt;((&lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;mesh&lt;&#x2F;span&gt;&lt;span&gt;) &lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;=&amp;gt; &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;dbEntities&lt;&#x2F;span&gt;&lt;span&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;MeshEntity&lt;&#x2F;span&gt;&lt;span&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#8fa1b3;&quot;&gt;putBatch&lt;&#x2F;span&gt;&lt;span&gt;(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;mesh&lt;&#x2F;span&gt;&lt;span&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#8fa1b3;&quot;&gt;toItem&lt;&#x2F;span&gt;&lt;span&gt;()))
+&lt;&#x2F;span&gt;&lt;span&gt;
+&lt;&#x2F;span&gt;&lt;span&gt;    await &lt;&#x2F;span&gt;&lt;span style=&quot;color:#8fa1b3;&quot;&gt;chunkRunner&lt;&#x2F;span&gt;&lt;span&gt;(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;batchPuts&lt;&#x2F;span&gt;&lt;span&gt;, 25, &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;async&lt;&#x2F;span&gt;&lt;span&gt; (&lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;batch&lt;&#x2F;span&gt;&lt;span&gt;) =&amp;gt; {
+&lt;&#x2F;span&gt;&lt;span&gt;        &lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;await &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;dbEntities&lt;&#x2F;span&gt;&lt;span&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;Table&lt;&#x2F;span&gt;&lt;span&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#8fa1b3;&quot;&gt;batchWrite&lt;&#x2F;span&gt;&lt;span&gt;(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;batch&lt;&#x2F;span&gt;&lt;span&gt;)
+&lt;&#x2F;span&gt;&lt;span&gt;    })
+&lt;&#x2F;span&gt;&lt;span&gt;}
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;h2 id=&quot;getting-it-back-out&quot;&gt;Getting it back out&lt;&#x2F;h2&gt;
+&lt;p&gt;Getting the back out is a little bit more complicated, we do the following.&lt;&#x2F;p&gt;
+&lt;ol&gt;
+&lt;li&gt;Select a model by name.&lt;&#x2F;li&gt;
+&lt;li&gt;Select a scene by ref that&#x27;s part of that model.&lt;&#x2F;li&gt;
+&lt;li&gt;Do a query on the nodes of that scene (This is where we can select only a subset, explained in a second).&lt;&#x2F;li&gt;
+&lt;li&gt;Do batch gets on each of the meshes referenced by the nodes.&lt;&#x2F;li&gt;
+&lt;li&gt;Do some more batch gets for each of the materials and primitives.&lt;&#x2F;li&gt;
+&lt;li&gt;Change all of the references in the gltf data to match what they are in the new file as node order will change in dynamo (especially when we&#x27;re only getting a subset).&lt;&#x2F;li&gt;
+&lt;li&gt;For each of the accessors, decode them from &lt;code&gt;Base64&lt;&#x2F;code&gt;, concatenate the buffers, generate &lt;code&gt;accessor&lt;&#x2F;code&gt; and &lt;code&gt;bufferView&lt;&#x2F;code&gt; objects with correct sizes and re-encode the concatenated buffer back into &lt;code&gt;Base64&lt;&#x2F;code&gt;.&lt;&#x2F;li&gt;
+&lt;li&gt;Take all of the parts and jam them into a gltf object (With typing help from GLTF Transform 🙏).&lt;&#x2F;li&gt;
+&lt;&#x2F;ol&gt;
+&lt;p&gt;As mentioned earlier, in the sort key for the &lt;code&gt;Node&lt;&#x2F;code&gt; entity, we&#x27;re storing the tree structure of the scene by using the path like so:&lt;&#x2F;p&gt;
+
+&lt;figure&gt;
+    &lt;img alt=&quot;A 3D file with visible tree structure&quot; src=&quot;.&amp;#x2F;tree.png&quot; width=&quot;100%&quot; style=&quot;&quot; &#x2F;&gt;
+    &lt;figcaption&gt;&lt;&#x2F;figcaption&gt;
+&lt;&#x2F;figure&gt;
+&lt;p&gt;Now, if in my initial query for the nodes in the table does &lt;code&gt;begins_with&lt;&#x2F;code&gt; for &lt;code&gt;0#1&lt;&#x2F;code&gt;, only the &lt;code&gt;torus&lt;&#x2F;code&gt;, &lt;code&gt;cylinder&lt;&#x2F;code&gt; and &lt;code&gt;suzanne&lt;&#x2F;code&gt; will be retrieved!&lt;&#x2F;p&gt;
+&lt;h2 id=&quot;implementation-limitations&quot;&gt;Implementation limitations&lt;&#x2F;h2&gt;
+&lt;p&gt;It&#x27;s important to note that my implementation of this is missing some key aspects of the GLTF spec.&lt;&#x2F;p&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;p&gt;Animations are a big one, and I skipped them due to lack of interest. I see no reason why they couldn&#x27;t be added though.
+As far as I know, animations are stored in buffers in the same way our &lt;code&gt;position&lt;&#x2F;code&gt; and &lt;code&gt;index&lt;&#x2F;code&gt; data are already stored for our primitives.&lt;&#x2F;p&gt;
+&lt;&#x2F;li&gt;
+&lt;li&gt;
+&lt;p&gt;Textures are another chunk I&#x27;ve missed out, and I&#x27;m not sure how to handle them. They&#x27;re stored in buffers too, but images are usually pretty big.
+Bigger than the 400KB item limit imposed by Dynamo.
+So maybe S3 is to come to the rescue for this.
+Obviously not as quick to interact with as Dynamo, but it can handle whatever you throw at it, and it&#x27;s much more convenient for allowing image modification.&lt;&#x2F;p&gt;
+&lt;&#x2F;li&gt;
+&lt;li&gt;
+&lt;p&gt;Draco is a no go. I don&#x27;t know how Draco works, and getting this working without Draco was confusing enough. I have doubts over whether Draco could even be possible but would like to have a look into it.&lt;&#x2F;p&gt;
+&lt;&#x2F;li&gt;
+&lt;&#x2F;ul&gt;
+&lt;h2 id=&quot;future&quot;&gt;Future&lt;&#x2F;h2&gt;
+&lt;p&gt;Besides trying to add what I just mentioned above, I&#x27;d like to run through some stuff that would be fun to explore with this.&lt;&#x2F;p&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;p&gt;Keeping a scene stored in the database like this means if we wanted to, we could access all of the node and material data, without having to download the meshes and their primitives.
+This would allow us to arrange a scene, via its nodes, and set the materials on the meshes (still, without downloading them, all we need is to update the mesh ref!).
+And if we were to get the bounding boxes for each of the meshes (Which might be available on the min&#x2F;max of each primitive), we could represent each of the nodes as cubes generated on the client.&lt;&#x2F;p&gt;
+&lt;&#x2F;li&gt;
+&lt;li&gt;
+&lt;p&gt;Realtime database synchronisation should be possible without much effort. If I was to rotate an object for example, that would be a few bytes of data being set in a Dynamo update.
+Combine that with some websockets syncing, (which would technically be possible without this database system) and you&#x27;re onto a winner.&lt;&#x2F;p&gt;
+&lt;&#x2F;li&gt;
+&lt;li&gt;
+&lt;p&gt;Huge 3D files could be fun to have a go of.&lt;&#x2F;p&gt;
+&lt;&#x2F;li&gt;
+&lt;&#x2F;ul&gt;
+&lt;h2 id=&quot;bad-erd&quot;&gt;Bad ERD&lt;&#x2F;h2&gt;
+&lt;p&gt;I made an ERD to try and help explain how this ties together. Idk if it helps 😅.&lt;&#x2F;p&gt;
+
+&lt;figure&gt;
+    &lt;img alt=&quot;An ERD representing the structure of the table&quot; src=&quot;.&amp;#x2F;GltfERD.png&quot; width=&quot;100%&quot; style=&quot;&quot; &#x2F;&gt;
+    &lt;figcaption&gt;I wanted an ERD but I hate making them, so this is all you&amp;#x27;re getting&lt;&#x2F;figcaption&gt;
+&lt;&#x2F;figure&gt;
+&lt;hr &#x2F;&gt;
+&lt;p&gt;Only recently started listening to some more Poppy, she&#x27;s hella weird. Here&#x27;s a couple of her songs.
+&lt;iframe style=&quot;border-radius:12px&quot; src=&quot;https:&amp;#x2F;&amp;#x2F;open.spotify.com&amp;#x2F;embed&amp;#x2F;track&amp;#x2F;6KwSYJxD2zqROxBB9mUQ20?utm_source=generator&quot; width=&quot;100%&quot; height=&quot;152&quot; frameBorder=&quot;0&quot; allowfullscreen=&quot;&quot;
+    allow=&quot;autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture&quot; loading=&quot;lazy&quot;&gt;&lt;&#x2F;iframe&gt;
+&lt;iframe style=&quot;border-radius:12px&quot; src=&quot;https:&amp;#x2F;&amp;#x2F;open.spotify.com&amp;#x2F;embed&amp;#x2F;track&amp;#x2F;7Bc59U2nhCp608JlIEMEGl?utm_source=generator&quot; width=&quot;100%&quot; height=&quot;152&quot; frameBorder=&quot;0&quot; allowfullscreen=&quot;&quot;
+    allow=&quot;autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture&quot; loading=&quot;lazy&quot;&gt;&lt;&#x2F;iframe&gt;&lt;&#x2F;p&gt;
+</content>
+	</entry>
+</feed>

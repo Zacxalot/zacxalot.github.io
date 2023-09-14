@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+      <meta http-equiv="X-UA-Compatible" content="IE=edge">
+      <meta http-equiv="content-type" content="text/html; charset=utf-8">
+      <meta name="google-site-verification" content="S_D6XT0jzn6m38pioQTiMnY2HFPuJUc3wtdV3CRtBEk" />
+      <script data-goatcounter="https://zacxalot.goatcounter.com/count"
+        async src="//gc.zgo.at/count.js"></script>
+
+      <!-- Enable responsiveness on mobile devices-->
+      <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1">
+
+      <title></title>
+
+      
+        <link rel="alternate" type="application/atom+xml" title="RSS" href="https://zacxalot.github.io/atom.xml">
+      
+
+      
+          <link rel="stylesheet" href="https://zacxalot.github.io/site.css">
+      
+
+      
+      
+    </head>
+
+    <body class="hack dark main container">
+        
+    
+        
+                
+                    <header>
+                        <nav itemscope itemtype="http://schema.org/SiteNavigationElement">
+                        
+                            <a itemprop="url"
+                               class=""
+                               href="https:&#x2F;&#x2F;zacxalot.github.io">
+                                <span itemprop="name">Home</span></a>
+                        
+                            <a itemprop="url"
+                               class=""
+                               href="https:&#x2F;&#x2F;zacxalot.github.io&#x2F;categories">
+                                <span itemprop="name">Categories</span></a>
+                        
+                            <a itemprop="url"
+                               class=""
+                               href="https:&#x2F;&#x2F;zacxalot.github.io&#x2F;tags">
+                                <span itemprop="name">Tags</span></a>
+                        
+                            <a itemprop="url"
+                               class=""
+                               href="https:&#x2F;&#x2F;github.com&#x2F;Zacxalot">
+                                <span itemprop="name">GitHub</span></a>
+                        
+                            <a itemprop="url"
+                               class=""
+                               href="https:&#x2F;&#x2F;www.linkedin.com&#x2F;in&#x2F;s-gregson&#x2F;">
+                                <span itemprop="name">LinkedIn</span></a>
+                        
+                        </nav>
+                    </header>
+                
+            
+    
+
+<article itemscope itemtype="http://schema.org/BlogPosting">
+    <header>
+        <h1 itemprop="headline">BMesh in Rust</h1>
+        <span class="muted">
+<svg style="margin-bottom:-3px" class="i-clock" viewBox="0 0 32 32" width="16" height="16" fill="none"
+    stroke="currentcolor" stroke-linecap="round" stroke-linejoin="round" stroke-width="6.25%">
+    <circle cx="16" cy="16" r="14" />
+    <path d="M16 8 L16 16 20 20" />
+</svg>
+<span>6 minute read</span>
+<svg style="margin-bottom: -3px" class="i-edit" viewBox="0 0 32 32" width="16" height="16" fill="none"
+    stroke="currentcolor" stroke-linecap="round" stroke-linejoin="round" stroke-width="6.25%">
+    <path d="M30 7 L25 2 5 22 3 29 10 27 Z M21 6 L26 11 Z M5 22 L10 27 Z" />
+</svg>
+
+Published: 2023-02-05
+</span>
+    </header>
+    <div itemprop="articleBody">
+      <p>I'll start with trying to answer some of the questions I left off with in my last post.</p>
+<ul>
+<li>Do I need to implement this myself or is there a library that will do what I need</li>
+</ul>
+<p>I found a package that might be heading in the right direction for what I need called <a href="https://crates.io/crates/hedron">hedron</a>, but the developer has stated that it's in &quot;Pre Alpha&quot; and a lot of the functionality I'd like to have such as boolean operations and subdivisions are marked as (TODO). Still, a very cool project! Has Bevy integration too!</p>
+<p>There were a few other packages that I found but they were all quite old/not flexible enough.</p>
+<hr />
+<ul>
+<li>Is this even what I need, or is it too advanced/3D specific</li>
+</ul>
+<p>Code now, ask questions later! I'm sure that won't come back to haunt me 😅</p>
+<p>I don't care I'm having fun.</p>
+<hr />
+<ul>
+<li>How do I implement this in safe Rust, there's a lot of pointer usage going on here and I feel there might be some confusing lifetimes going on in there too</li>
+</ul>
+<p>This is where it gets a bit rough. I've been hurting my brain trying to implement just the data structure in safe Rust and I've found it to be extremely difficult, at least when trying to translate from C++. The problem is the one I foresaw, a crazy amount of pointer usage, and those pointers go back and forth too. As you would expect, a <code>BMEdge</code> has a pointer to two vertices. But if vertex hasn't got any edges attached to it yet, the vertex gets a pointer to the edge that was just created.</p>
+<p>This bi-directional referencing is used throught the BMesh structure (Diagram from the Blender wiki <a href="https://wiki.blender.org/w/images/0/06/Dev-BMesh-Structures.png">here</a>, bit of a hectic image), I believe it's integral for making the data easily traversable. </p>
+<p>I had a look at the source code for <code>LinkedList</code> in the Rust standard library for some potential hints on how to make something like this safe, but <code>LinkedList</code> isn't safe either.</p>
+<pre data-lang="rust" style="background-color:#2b303b;color:#c0c5ce;" class="language-rust "><code class="language-rust" data-lang="rust"><span style="color:#65737e;">// linked_list.rs Rust standard library
+</span><span>
+</span><span style="color:#b48ead;">pub struct </span><span>LinkedList&lt;T&gt; {
+</span><span>    </span><span style="color:#bf616a;">head</span><span>: Option&lt;NonNull&lt;Node&lt;T&gt;&gt;&gt;,
+</span><span>    </span><span style="color:#bf616a;">tail</span><span>: Option&lt;NonNull&lt;Node&lt;T&gt;&gt;&gt;,
+</span><span>    </span><span style="color:#bf616a;">len</span><span>: </span><span style="color:#b48ead;">usize</span><span>,
+</span><span>    </span><span style="color:#bf616a;">marker</span><span>: PhantomData&lt;Box&lt;Node&lt;T&gt;&gt;&gt;,
+</span><span>}
+</span><span>
+</span><span style="color:#b48ead;">struct </span><span>Node&lt;T&gt; {
+</span><span>    </span><span style="color:#bf616a;">next</span><span>: Option&lt;NonNull&lt;Node&lt;T&gt;&gt;&gt;,
+</span><span>    </span><span style="color:#bf616a;">prev</span><span>: Option&lt;NonNull&lt;Node&lt;T&gt;&gt;&gt;,
+</span><span>    </span><span style="color:#bf616a;">element</span><span>: T,
+</span><span>}
+</span></code></pre>
+<p>There's still a lot that I'm not sure about here. I think <code>PhantomData&lt;Box&lt;Node&lt;T&gt;&gt;&gt;</code> is there to tell the compiler that the struct owns some values of type <code>T</code>, ever though it doesn't really, it just owns some pointers. I'm not sure on that though, if that is what it's doing, I don't know why we need to do it. There's also the usage of <code>NotNull</code> for the pointers to Node. From what I can tell, it is just a wrapper around this: <code>pointer: *const T</code>, why we need that I have no idea. Both of these are covered by a nifty Rust book <a href="https://rust-unofficial.github.io/too-many-lists/sixth-variance.html">Learning Rust With Entirely Too Many Linked Lists</a>, which I've read a bit of but clearly I have not fully understood (I'm going to have another go later).</p>
+<h2 id="implemenatations">Implemenatations</h2>
+<p>So! Over to my probably poor implementation of something similar. Similar in the sense that it's using raw pointers anyway.</p>
+<pre data-lang="rust" style="background-color:#2b303b;color:#c0c5ce;" class="language-rust "><code class="language-rust" data-lang="rust"><span style="color:#65737e;">// bm_vert.rs
+</span><span style="color:#b48ead;">pub type </span><span>PBMVert = </span><span style="color:#b48ead;">*mut </span><span>ManuallyDrop&lt;BMVert&gt;;
+</span><span>
+</span><span>#[</span><span style="color:#bf616a;">derive</span><span>(Debug)]
+</span><span style="color:#b48ead;">pub struct </span><span>BMVert {
+</span><span>    </span><span style="color:#b48ead;">pub </span><span style="color:#bf616a;">edge</span><span>: Option&lt;PBMEdge&gt;,
+</span><span>    </span><span style="color:#b48ead;">pub </span><span style="color:#bf616a;">vertex</span><span>: Vertex,
+</span><span>}
+</span><span>
+</span><span style="color:#65737e;">// bm_edge.rs
+</span><span style="color:#b48ead;">pub type </span><span>PBMEdge = </span><span style="color:#b48ead;">*mut </span><span>ManuallyDrop&lt;BMEdge&gt;;
+</span><span>
+</span><span style="color:#b48ead;">pub struct </span><span>BMEdge {
+</span><span>    </span><span style="color:#b48ead;">pub </span><span style="color:#bf616a;">v0</span><span>: PBMVert,
+</span><span>    </span><span style="color:#b48ead;">pub </span><span style="color:#bf616a;">v1</span><span>: PBMVert,
+</span><span>    </span><span style="color:#b48ead;">pub</span><span> r#</span><span style="color:#bf616a;">loop</span><span>: PBMLoop,
+</span><span>    </span><span style="color:#b48ead;">pub </span><span style="color:#bf616a;">v0_disk_link</span><span>: BMDiskLink,
+</span><span>    </span><span style="color:#b48ead;">pub </span><span style="color:#bf616a;">v1_disk_link</span><span>: BMDiskLink,
+</span><span>}
+</span></code></pre>
+<p>I've also implemented the vert and edge create Euler operations mentioned in the <a href="https://wiki.blender.org/wiki/Source/Modeling/BMesh/Design#Low-level_API">BMesh design page </a>.</p>
+<pre data-lang="rust" style="background-color:#2b303b;color:#c0c5ce;" class="language-rust "><code class="language-rust" data-lang="rust"><span style="color:#65737e;">// bm_vert.rs
+</span><span style="color:#b48ead;">pub fn </span><span style="color:#8fa1b3;">bm_vert_create</span><span>(</span><span style="color:#bf616a;">_bmesh</span><span>: &amp;</span><span style="color:#b48ead;">mut</span><span> BMesh) -&gt; ManuallyDrop&lt;BMVert&gt; {
+</span><span>    ManuallyDrop::new(BMVert::from((</span><span style="color:#d08770;">0.0</span><span>, </span><span style="color:#d08770;">0.0</span><span>)))
+</span><span>}
+</span><span>
+</span><span style="color:#65737e;">// bm_edge.rs
+</span><span style="color:#b48ead;">pub fn </span><span style="color:#8fa1b3;">bm_edge_create</span><span>(</span><span style="color:#bf616a;">_bmesh</span><span>: &amp;</span><span style="color:#b48ead;">mut</span><span> BMesh, </span><span style="color:#bf616a;">v0</span><span>: PBMVert, </span><span style="color:#bf616a;">v1</span><span>: PBMVert) -&gt; ManuallyDrop&lt;BMEdge&gt; {
+</span><span>    </span><span style="color:#b48ead;">let mut</span><span> e = ManuallyDrop::new(BMEdge {
+</span><span>        v0,
+</span><span>        v1,
+</span><span>        r#</span><span style="color:#b48ead;">loop</span><span>: </span><span style="color:#96b5b4;">null_mut</span><span>(),
+</span><span>        v0_disk_link: BMDiskLink::new(),
+</span><span>        v1_disk_link: BMDiskLink::new(),
+</span><span>    });
+</span><span>
+</span><span>    </span><span style="color:#96b5b4;">bmesh_disk_edge_append</span><span>(&amp;</span><span style="color:#b48ead;">mut</span><span> e, v0);
+</span><span>    </span><span style="color:#96b5b4;">bmesh_disk_edge_append</span><span>(&amp;</span><span style="color:#b48ead;">mut</span><span> e, v1);
+</span><span>
+</span><span>    e
+</span><span>}
+</span></code></pre>
+<p>Comparing the two, there are a few things I'm doing differently and probably completely wrong. I'm using <code>ManuallyDrop</code> everywhere, this is because the BMesh struct we make doesn't actually own any of the Vertices, Edges, Faces... that it is made up of. So if we didn't stop it from dropping the values we create, we could get into a situation where we have dangling pointers. At least I think that's what I'm doing by wrapping everything in <code>ManuallyDrop</code>.</p>
+<p>I implemented Drop on <code>BMVert</code> to see when its drop was being called and it stopped calling that as soon as I wrapped it in <code>ManuallyDrop</code> so I just went with it. Without it, the dangling pointers still pointed to the right data, but I think this data no longer had the guaratee of being what we expect it to be. Scary stuff!</p>
+<p>So, I think this <code>ManuallyDrop</code> stuff is fine, but maybe not the best solution for this problem. It might be solved by using <code>PhantomData&lt;Box&lt;Node&lt;T&gt;&gt;&gt;</code>. Or maybe I do need it, I don't know. The Blender code uses <code>mempool</code>'s which look complicated too.</p>
+<p>Another thing I'm doing differently is I'm using <code>*mut</code> rather than <code>NonNull</code>. Only because I don't know how <code>NonNull</code> works or why it's useful yet.</p>
+<p>Finally, I noticed that I'm not using Box anywhere, so I am guessing everything I've been making so far has been going on the stack. </p>
+<h2 id="difficult-but-fun">Difficult but fun</h2>
+<p>I really enjoy working with Rust and this is a side of it that I've never needed to touch on before. Knowing that standard library stuff is also unsafe makes me feel less nauseous about using it but I'm still well aware that there's a lot of pitfalls for me to jump into. I've got a lot left to learn but I'm getting there. I'm going to go and read some stuff and probably rewrite everything.</p>
+<p>Thanks for reading!</p>
+<hr />
+<p>I'm a bit too young to have experienced the music of the 90's, and I'm kind of glad because most of it sounds terrible compared to its bookending decades.
+There's some alright stuff in there though, I just found <code>Come on over Baby (All I Want Is You) by Christina Aguilera</code>.
+Give this a listen it's pretty sweet.</p>
+<iframe style="border-radius:12px" src="https:&#x2F;&#x2F;open.spotify.com&#x2F;embed&#x2F;track&#x2F;4L8AtXJFgtX5E3Hr172uIg?utm_source=generator&amp;theme=0" width="100%" height="152" frameBorder="0" allowfullscreen=""
+    allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" loading="lazy"></iframe>
+<p>I tried embedding the proper album version, but Spotify's embed functionality links you to the wrong song if it's a multi disker apparently 🙄.</p>
+
+    </div>
+
+    
+        <footer>
+            <hr>
+            <p>
+                
+                    Published by Samuel Gregson
+                
+                
+                    
+                    in <a href="https://zacxalot.github.io/categories/flat-blend/">Flat-Blend</a>
+                
+                
+                    and
+                    tagged
+                    
+                        <a href="https://zacxalot.github.io/tags/rust/">rust</a>
+                        
+                            
+                                
+                                    ,
+                                
+                            
+                        
+                    
+                        <a href="https://zacxalot.github.io/tags/bmesh/">bmesh</a>
+                        
+                            
+                                
+                                    and
+                                
+                            
+                        
+                    
+                        <a href="https://zacxalot.github.io/tags/blender/">blender</a>
+                        
+                            
+                        
+                    
+                
+            </p>
+            
+            
+        </footer>
+    
+</article>
+
+
+    </body>
+
+</html>

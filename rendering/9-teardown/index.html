@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+      <meta http-equiv="X-UA-Compatible" content="IE=edge">
+      <meta http-equiv="content-type" content="text/html; charset=utf-8">
+      <meta name="google-site-verification" content="S_D6XT0jzn6m38pioQTiMnY2HFPuJUc3wtdV3CRtBEk" />
+      <script data-goatcounter="https://zacxalot.goatcounter.com/count"
+        async src="//gc.zgo.at/count.js"></script>
+
+      <!-- Enable responsiveness on mobile devices-->
+      <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1">
+
+      <title></title>
+
+      
+        <link rel="alternate" type="application/atom+xml" title="RSS" href="https://zacxalot.github.io/atom.xml">
+      
+
+      
+          <link rel="stylesheet" href="https://zacxalot.github.io/site.css">
+      
+
+      
+      
+    </head>
+
+    <body class="hack dark main container">
+        
+    
+        
+                
+                    <header>
+                        <nav itemscope itemtype="http://schema.org/SiteNavigationElement">
+                        
+                            <a itemprop="url"
+                               class=""
+                               href="https:&#x2F;&#x2F;zacxalot.github.io">
+                                <span itemprop="name">Home</span></a>
+                        
+                            <a itemprop="url"
+                               class=""
+                               href="https:&#x2F;&#x2F;zacxalot.github.io&#x2F;categories">
+                                <span itemprop="name">Categories</span></a>
+                        
+                            <a itemprop="url"
+                               class=""
+                               href="https:&#x2F;&#x2F;zacxalot.github.io&#x2F;tags">
+                                <span itemprop="name">Tags</span></a>
+                        
+                            <a itemprop="url"
+                               class=""
+                               href="https:&#x2F;&#x2F;github.com&#x2F;Zacxalot">
+                                <span itemprop="name">GitHub</span></a>
+                        
+                            <a itemprop="url"
+                               class=""
+                               href="https:&#x2F;&#x2F;www.linkedin.com&#x2F;in&#x2F;s-gregson&#x2F;">
+                                <span itemprop="name">LinkedIn</span></a>
+                        
+                        </nav>
+                    </header>
+                
+            
+    
+
+<article itemscope itemtype="http://schema.org/BlogPosting">
+    <header>
+        <h1 itemprop="headline">Teardown Render Techniques</h1>
+        <span class="muted">
+<svg style="margin-bottom:-3px" class="i-clock" viewBox="0 0 32 32" width="16" height="16" fill="none"
+    stroke="currentcolor" stroke-linecap="round" stroke-linejoin="round" stroke-width="6.25%">
+    <circle cx="16" cy="16" r="14" />
+    <path d="M16 8 L16 16 20 20" />
+</svg>
+<span>6 minute read</span>
+<svg style="margin-bottom: -3px" class="i-edit" viewBox="0 0 32 32" width="16" height="16" fill="none"
+    stroke="currentcolor" stroke-linecap="round" stroke-linejoin="round" stroke-width="6.25%">
+    <path d="M30 7 L25 2 5 22 3 29 10 27 Z M21 6 L26 11 Z M5 22 L10 27 Z" />
+</svg>
+
+Published: 2023-05-13
+</span>
+    </header>
+    <div itemprop="articleBody">
+      <script type="module" src="https://unpkg.com/@google/model-viewer/dist/model-viewer.min.js"></script>
+<p>I've had a couple months off from the blog, but I'm going to try and get back into it again.</p>
+<p>To jump back in, I'm going to try and figure out how the game <a href="https://store.steampowered.com/app/1167630/Teardown/">Teardown</a> renders so many voxels and makes it look so pretty at the same time!</p>
+<p>I'm going to carry on with flat blend at some point, it's in dire need of some restructuring to require less boilerplate when adding render passes. Adding that grid took way more effort than I think it should, sapping my motivation along with it.</p>
+<p>Before anything, I just want to make it clear that I'll be doing a good amount of guessing here, and my guesses will be wrong in many cases, but hopefully some guesses will be right 😅.</p>
+<h1 id="teardown">Teardown</h1>
+<p>Teardown is a destruction simulation sandbox game where you warp the environment to complete heists. If you haven't seen any footage of it yet, give some a watch, it's very impressive.</p>
+<p>The frame I have captured for analysis doesn't do the games capabilities any justice, but for the sake of figuring out what was going on, I thought it would be best to keep simple. </p>
+
+<figure>
+    <img alt="The final rendered scene from teardown featuring a broken sign, some background structures, telephone wires, trees and a digger" src=".&#x2F;final-image.png" width="100%" style="" />
+    <figcaption></figcaption>
+</figure><h2 id="voxels">Voxels</h2>
+<p>The first thing in the rendering job list (after clearing the screen, and doing something <a href="wtf.png">with this texture</a>!?!?) is some voxels! <a href="https://en.wikipedia.org/wiki/Voxel">Voxels</a> are the 3D equivalent of pixels. Similarly to 2D images, the data that is stored per voxel doesn't have to be colour values meant for human consumption.</p>
+<p>In the case of Teardown, the 3D textures contain references to <a href="https://en.wikipedia.org/wiki/Indexed_color">indexed colours</a>, which are held in a separate texture. This technique was utilised in a lot (sometimes involuntarily) in early games, but it's benefits still ring true in its usage today. By using it in Teardown, the developer saved ~75% of storage per voxel because they only need to store a single colour channel. Due to the extra dimension, voxel data can get very big very quick, so any space saving makes a great impact.</p>
+<p>Trying to visualise 3D textures in 2D is difficult, so to give you a good example of how this works, I extracted a 3D texture from the framebuffer in this capture and wrangled it into Blender for some rendering!</p>
+<p>Below is a representation of the 3D texture with its single channel (monochrome) index values mapped to the colour channels.</p>
+
+<figure>
+    <img alt="a greyscale image of the sign representing the indexed values before they have been mapped to colours" src=".&#x2F;indexed.png" width="100%" style="" />
+    <figcaption></figcaption>
+</figure>
+<p>Along with this, there is the texture that holds all the colours these index values map to. The image below is just a snippet of the whole texture which contains all the colours for the scene. This snippet does not necessarily have the colours for the sign. Without diving into the code, I'm guessing that each row is an object.</p>
+
+<figure>
+    <img alt="a pixelated image where each pixel is a single colour " src=".&#x2F;index colours.png" width="100%" style="image-rendering: crisp-edges" />
+    <figcaption></figcaption>
+</figure>
+<p>With both of these, we can get our final colours per voxel. Below is a 2D example of this in action</p>
+
+<figure>
+    <img alt="a pixelated image where each pixel is a single colour " src=".&#x2F;battenberg.svg" width="100%" style="image-rendering: crisp-edges" />
+    <figcaption></figcaption>
+</figure>
+<p>With the colours applied to our voxels, we get this!</p>
+<p><model-viewer 
+    src="sign.glb"
+    ios-src="sign.glb"
+    alt=""
+    rotation-per-second="32"
+    shadow-intensity="1"
+    camera-controls
+    auto-rotate ar
+    style="width:100%;height: 75vh; border-radius:15px;"
+></p>
+<p>That isn't the whole story though! The model above is made up of 891 cube meshes with different materials, <code>10692</code> triangles and is rendered in <code>891</code> draw calls. The sign in Teardown however, is rendered in a single draw call, and is made up of only <code>12</code> triangles!
+This is because in Teardown, all of the complexity of the structure is held in the 3D voxel textures and is fleshed out by the fragment shader.</p>
+<p>This is where I was hoping to explain how the fragment shader works, but like all shader code, it's quite hard to read.
+I think I understand it well enough to summarise though.</p>
+<p>The method it uses is called <a href="https://en.wikipedia.org/wiki/Ray_casting">ray casting</a>, where a ray is cast from the camera towards the the point in space we are looking for. As the ray steps along, intersection tests are made against the 3D texture and once it intersects, it stops, and returns the colour index amongst other things such as the depth of the ray and normal data (not sure how it does this but it's smart!).</p>
+<p>Here are some of the images (there's some others for masking and transparency but we don't care about those) that result from this shader. You'll notice the material image which was generated using an index in the same way as the colour image. It's used later on to know how metallic (or other properties) a pixel is.</p>
+
+<figure>
+    <img alt="Four images of the sign we rendered, each one one of the following: colour, depth, material and normal" src=".&#x2F;first-pass-outputs.png" width="100%" style="border-radius: 1.5rem" />
+    <figcaption></figcaption>
+</figure>
+<p>After this, there is some lighting effects that are applied, but because it's daytime the only light that has any effect is the sun. Curiously, there still seems to be a draw call of each of the lights in the scene, they just don't do anything 🤷.</p>
+<p>Just after, there is some reflections drawn, using the material texture from earlier, to determine whether something is reflective or not.</p>
+<p>And to finish off the cube map sky texture is drawn, and some bloom is added on top ☀️</p>
+
+<figure>
+    <img alt="The final rendered scene from teardown featuring a broken sign, some background structures, telephone wires, trees and a digger" src=".&#x2F;final-image.png" width="100%" style="" />
+    <figcaption></figcaption>
+</figure>
+<hr />
+<p>Before I finish, I want to mention <a href="https://www.youtube.com/watch?v=aMcJ1Jvtef0&amp;t=3353s">this great video</a> which shows some of the creative ways you can manipulate the colour palette to do animations!</p>
+<p>I'd also like to apologise for any repetition or poor writing so far, it's hard to write about this stuff using words rather than code and maths. And sorry again for any inaccuracies 😅 I'm just piecing things together using <a href="https://renderdoc.org/">Renderdoc</a> so I'm bound to be off in some places.</p>
+<hr />
+<p><code>Suite-Pee</code> by <code>System Of A Down</code>. Good tune, kinda angry and pretty short but it's fun. Intro is amazing and the bridge is like nothing else!
+<iframe style="border-radius:12px" src="https:&#x2F;&#x2F;open.spotify.com&#x2F;embed&#x2F;track&#x2F;1qGmxIGEuBEkj7bft72Kh0?utm_source=generator" width="100%" height="152" frameBorder="0" allowfullscreen=""
+    allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" loading="lazy"></iframe></p>
+
+    </div>
+
+    
+        <footer>
+            <hr>
+            <p>
+                
+                    Published by Samuel Gregson
+                
+                
+                    
+                    in <a href="https://zacxalot.github.io/categories/rendering/">Rendering</a>
+                
+                
+                    and
+                    tagged
+                    
+                        <a href="https://zacxalot.github.io/tags/graphics/">graphics</a>
+                        
+                    
+                
+            </p>
+            
+            
+        </footer>
+    
+</article>
+
+
+    </body>
+
+</html>

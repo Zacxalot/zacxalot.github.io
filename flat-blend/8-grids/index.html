@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+      <meta http-equiv="X-UA-Compatible" content="IE=edge">
+      <meta http-equiv="content-type" content="text/html; charset=utf-8">
+      <meta name="google-site-verification" content="S_D6XT0jzn6m38pioQTiMnY2HFPuJUc3wtdV3CRtBEk" />
+      <script data-goatcounter="https://zacxalot.goatcounter.com/count"
+        async src="//gc.zgo.at/count.js"></script>
+
+      <!-- Enable responsiveness on mobile devices-->
+      <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1">
+
+      <title></title>
+
+      
+        <link rel="alternate" type="application/atom+xml" title="RSS" href="https://zacxalot.github.io/atom.xml">
+      
+
+      
+          <link rel="stylesheet" href="https://zacxalot.github.io/site.css">
+      
+
+      
+      
+    </head>
+
+    <body class="hack dark main container">
+        
+    
+        
+                
+                    <header>
+                        <nav itemscope itemtype="http://schema.org/SiteNavigationElement">
+                        
+                            <a itemprop="url"
+                               class=""
+                               href="https:&#x2F;&#x2F;zacxalot.github.io">
+                                <span itemprop="name">Home</span></a>
+                        
+                            <a itemprop="url"
+                               class=""
+                               href="https:&#x2F;&#x2F;zacxalot.github.io&#x2F;categories">
+                                <span itemprop="name">Categories</span></a>
+                        
+                            <a itemprop="url"
+                               class=""
+                               href="https:&#x2F;&#x2F;zacxalot.github.io&#x2F;tags">
+                                <span itemprop="name">Tags</span></a>
+                        
+                            <a itemprop="url"
+                               class=""
+                               href="https:&#x2F;&#x2F;github.com&#x2F;Zacxalot">
+                                <span itemprop="name">GitHub</span></a>
+                        
+                            <a itemprop="url"
+                               class=""
+                               href="https:&#x2F;&#x2F;www.linkedin.com&#x2F;in&#x2F;s-gregson&#x2F;">
+                                <span itemprop="name">LinkedIn</span></a>
+                        
+                        </nav>
+                    </header>
+                
+            
+    
+
+<article itemscope itemtype="http://schema.org/BlogPosting">
+    <header>
+        <h1 itemprop="headline">⌗⌗⌗⌗⌗⌗⌗⌗ Grids ⌗⌗⌗⌗⌗⌗⌗⌗</h1>
+        <span class="muted">
+<svg style="margin-bottom:-3px" class="i-clock" viewBox="0 0 32 32" width="16" height="16" fill="none"
+    stroke="currentcolor" stroke-linecap="round" stroke-linejoin="round" stroke-width="6.25%">
+    <circle cx="16" cy="16" r="14" />
+    <path d="M16 8 L16 16 20 20" />
+</svg>
+<span>6 minute read</span>
+<svg style="margin-bottom: -3px" class="i-edit" viewBox="0 0 32 32" width="16" height="16" fill="none"
+    stroke="currentcolor" stroke-linecap="round" stroke-linejoin="round" stroke-width="6.25%">
+    <path d="M30 7 L25 2 5 22 3 29 10 27 Z M21 6 L26 11 Z M5 22 L10 27 Z" />
+</svg>
+
+Published: 2023-03-16
+</span>
+    </header>
+    <div itemprop="articleBody">
+      <p>Blender has a grid, I want a grid!
+Blender's grid shader is defined in <code>overlay_grid_frag.glsl</code>.
+Whoever made this shader kindly left an explanation of what the code is achieving and a little bit about how it does it at the top, as well as a link to a chapter in <a href="https://developer.nvidia.com/gpugems/gpugems2/part-iii-high-quality-rendering/chapter-22-fast-prefiltered-lines">Nvidia's GPU Gems 2</a> showing a different way to make pre-filtered lines. I had a read of both of these, as well as the shader code, and I was completely stumped!</p>
+<p>So I decided to have a go of implementing it myself from scratch. Before messing about trying to add a new pipeline to the flat-blend code, I downloaded <a href="https://shadered.org/">SHADERed</a> to let me iterate on my code quicker. SHADERed is like the desktop version of <a href="https://www.shadertoy.com/">Shadertoy</a>. I really don't like the code editor (weird auto brackets, no comment line shortcut and other annoyances), but the rest is extremely useful for trying different things out. There is a VSCode extension for it but that was annoying in a different way 🙃. </p>
+<p>The first part I got working was the large grid squares. I wrote this code to get whether a pixel was part of a grid or not. </p>
+<pre data-lang="glsl" style="background-color:#2b303b;color:#c0c5ce;" class="language-glsl "><code class="language-glsl" data-lang="glsl"><span style="color:#b48ead;">float </span><span style="color:#8fa1b3;">getGrid</span><span>(</span><span style="color:#b48ead;">vec2 </span><span style="color:#bf616a;">uv</span><span>,</span><span style="color:#b48ead;">int </span><span style="color:#bf616a;">size</span><span>) {
+</span><span>	</span><span style="color:#b48ead;">vec2</span><span> grid = </span><span style="color:#96b5b4;">mod</span><span>((uv - (uResolution / </span><span style="color:#d08770;">2</span><span>)) - </span><span style="color:#d08770;">0.5</span><span>,size);
+</span><span>	</span><span style="color:#b48ead;">return </span><span style="color:#d08770;">1.0 </span><span>- (</span><span style="color:#96b5b4;">clamp</span><span>(</span><span style="color:#96b5b4;">min</span><span>(grid.</span><span style="color:#bf616a;">x</span><span>, grid.</span><span style="color:#bf616a;">y</span><span>), </span><span style="color:#d08770;">1.0</span><span>, </span><span style="color:#d08770;">2.0</span><span>) - </span><span style="color:#d08770;">1.0</span><span>);
+</span><span>}
+</span></code></pre>
+<p>I'm not too proud of it as it seems a bit overcomplicated, but I'm new to writing shaders so it'll probably one I come back to in the future. I'll try and break it down though.</p>
+<p><code>(uv - (uResolution / 2)) - 0.5</code> gives us the coordinates of each pixel relative to the centre of the screen which, when projected onto the red and green output channels, looks like this:
+
+<figure>
+    <img alt="A viewport divided into four sections, green, yellow, black and red" src=".&#x2F;centre.png" width="100%" style="" />
+    <figcaption></figcaption>
+</figure></p>
+<p>Then we get the mod of this like so <code>mod((uv - (uResolution / 2)) - 0.5,size)</code>, which does a kind of sawtooth pass over our input, splitting it into squares of <code>size</code> width and height, which results in this:
+
+<figure>
+    <img alt="A viewport divided into yellow squares" src=".&#x2F;big_grid.png" width="100%" style="" />
+    <figcaption></figcaption>
+</figure></p>
+<p>You can see from this there are red lines going across the screen and green lines going up. To extract the grid from this we run this <code>1.0 - (clamp(min(grid.x, grid.y), 1.0, 2.0) - 1.0)</code> over it. First we get the <code>min(grid., grid.y)</code> which is where there is only red or only green (all of the yellow is where there is both), then clamp it between <code>1.0</code> and <code>2.0</code>. We then subtract <code>1.0</code> from this to make the actual range of values be between <code>0.0</code> and <code>1.0</code> (This seems a bit convoluted but looked better than other things I tried). Finally, we do <code>1.0 - black_grid</code> to get a white grid with a black background:
+
+<figure>
+    <img alt="A white grid on a black background" src=".&#x2F;big.png" width="100%" style="" />
+    <figcaption></figcaption>
+</figure></p>
+<p>I then run this same function with a size parameter half that of the larger grid to get a grid with squares half of the size. These are then combined like so <code>vec3 grid = vec3(max(big / 2, small / 8))</code> to produce this:
+
+<figure>
+    <img alt="A white grid with smaller less bold squares on a black background" src=".&#x2F;big_and_small.png" width="100%" style="" />
+    <figcaption></figcaption>
+</figure></p>
+<p>Now it's time for the axis! This is where I got stuck trying to re-use my <code>getGrid</code> function in a similar way to how Blender does it, but my implementation was too different, so I ended up making a new <code>getAxis</code> method.</p>
+<pre data-lang="glsl" style="background-color:#2b303b;color:#c0c5ce;" class="language-glsl "><code class="language-glsl" data-lang="glsl"><span style="color:#b48ead;">float </span><span style="color:#8fa1b3;">getAxis</span><span>(</span><span style="color:#b48ead;">vec2 </span><span style="color:#bf616a;">uv</span><span>, </span><span style="color:#b48ead;">int </span><span style="color:#bf616a;">axis</span><span>) {
+</span><span>	</span><span style="color:#b48ead;">float</span><span> line = </span><span style="color:#96b5b4;">abs</span><span>(((uv[axis] + </span><span style="color:#d08770;">0.5</span><span>) - (uResolution[axis]/</span><span style="color:#d08770;">2</span><span>))/</span><span style="color:#d08770;">5</span><span>);
+</span><span>	</span><span style="color:#b48ead;">return </span><span style="color:#96b5b4;">clamp</span><span>(</span><span style="color:#d08770;">1.0 </span><span>- line, </span><span style="color:#d08770;">0.0</span><span>, </span><span style="color:#d08770;">1.0</span><span>);
+</span><span>}
+</span></code></pre>
+<p>This operates on a similar principal to the get grid but operates on only one axis at a time, and instead of performing a <code>mod</code>, the output is divided and <code>abs</code>'ed to give a gradient along the axis like this:
+
+<figure>
+    <img alt="A white line along the y axis" src=".&#x2F;y_axis.png" width="100%" style="" />
+    <figcaption></figcaption>
+</figure></p>
+<p>If we run this for the other axis, and assign each to their respective colour channels like so <code>vec3 axis = vec3(xAxis, yAxis, 0.0);</code>, we get our axis!
+
+<figure>
+    <img alt="Red and green x and y axis" src=".&#x2F;axis.png" width="100%" style="" />
+    <figcaption></figcaption>
+</figure></p>
+<p>Then, all we do is combine that with the grid we had from before to get out final output 🥳
+
+<figure>
+    <img alt="A grid with all previously described elements on it" src=".&#x2F;complete_grid.png" width="100%" style="" />
+    <figcaption></figcaption>
+</figure></p>
+<p>Here is the final fragment shader</p>
+<pre data-lang="glsl" style="background-color:#2b303b;color:#c0c5ce;" class="language-glsl "><code class="language-glsl" data-lang="glsl"><span style="color:#b48ead;">#version</span><span> 330
+</span><span>
+</span><span style="color:#b48ead;">uniform vec2</span><span> uResolution;
+</span><span style="color:#b48ead;">out vec4</span><span> outColor;
+</span><span>
+</span><span style="color:#b48ead;">int</span><span> squareSize = </span><span style="color:#d08770;">160</span><span>;
+</span><span style="color:#b48ead;">int</span><span> smallSquareSize = squareSize / </span><span style="color:#d08770;">2</span><span>;
+</span><span>
+</span><span style="color:#b48ead;">float </span><span style="color:#8fa1b3;">getGrid</span><span>(</span><span style="color:#b48ead;">vec2 </span><span style="color:#bf616a;">uv</span><span>,</span><span style="color:#b48ead;">int </span><span style="color:#bf616a;">size</span><span>) {
+</span><span>	</span><span style="color:#b48ead;">vec2</span><span> grid = </span><span style="color:#96b5b4;">mod</span><span>((uv - (uResolution / </span><span style="color:#d08770;">2</span><span>)) - </span><span style="color:#d08770;">0.5</span><span>,size);
+</span><span>	</span><span style="color:#b48ead;">return </span><span style="color:#d08770;">1.0 </span><span>- (</span><span style="color:#96b5b4;">clamp</span><span>(</span><span style="color:#96b5b4;">min</span><span>(grid.</span><span style="color:#bf616a;">x</span><span>, grid.</span><span style="color:#bf616a;">y</span><span>), </span><span style="color:#d08770;">1.0</span><span>, </span><span style="color:#d08770;">2.0</span><span>) - </span><span style="color:#d08770;">1.0</span><span>);
+</span><span>}
+</span><span>
+</span><span style="color:#b48ead;">float </span><span style="color:#8fa1b3;">getAxis</span><span>(</span><span style="color:#b48ead;">vec2 </span><span style="color:#bf616a;">uv</span><span>, </span><span style="color:#b48ead;">int </span><span style="color:#bf616a;">axis</span><span>) {
+</span><span>	</span><span style="color:#b48ead;">float</span><span> line = </span><span style="color:#96b5b4;">abs</span><span>(((uv[axis] + </span><span style="color:#d08770;">0.5</span><span>) - (uResolution[axis]/</span><span style="color:#d08770;">2</span><span>))/</span><span style="color:#d08770;">4</span><span>);
+</span><span>	</span><span style="color:#b48ead;">return </span><span style="color:#96b5b4;">clamp</span><span>(</span><span style="color:#d08770;">1.0 </span><span>- line, </span><span style="color:#d08770;">0.0</span><span>, </span><span style="color:#d08770;">1.0</span><span>);
+</span><span>}
+</span><span>
+</span><span style="color:#b48ead;">void </span><span style="color:#8fa1b3;">main</span><span>() {	
+</span><span>	</span><span style="color:#b48ead;">float</span><span> big = </span><span style="color:#bf616a;">getGrid</span><span>(</span><span style="color:#bf616a;">gl_FragCoord</span><span>.</span><span style="color:#bf616a;">xy</span><span>, squareSize);
+</span><span>	</span><span style="color:#b48ead;">float</span><span> small = </span><span style="color:#bf616a;">getGrid</span><span>(</span><span style="color:#bf616a;">gl_FragCoord</span><span>.</span><span style="color:#bf616a;">xy</span><span>, smallSquareSize);
+</span><span>	</span><span style="color:#b48ead;">float</span><span> xAxis = </span><span style="color:#bf616a;">getAxis</span><span>(</span><span style="color:#bf616a;">gl_FragCoord</span><span>.</span><span style="color:#bf616a;">xy</span><span>, </span><span style="color:#d08770;">1</span><span>);
+</span><span>	</span><span style="color:#b48ead;">float</span><span> yAxis = </span><span style="color:#bf616a;">getAxis</span><span>(</span><span style="color:#bf616a;">gl_FragCoord</span><span>.</span><span style="color:#bf616a;">xy</span><span>, </span><span style="color:#d08770;">0</span><span>);
+</span><span>
+</span><span>	</span><span style="color:#b48ead;">vec3</span><span> axis = </span><span style="color:#b48ead;">vec3</span><span>(xAxis, yAxis, </span><span style="color:#d08770;">0.0</span><span>);
+</span><span>	</span><span style="color:#b48ead;">vec3</span><span> grid = </span><span style="color:#b48ead;">vec3</span><span>(</span><span style="color:#96b5b4;">max</span><span>(big / </span><span style="color:#d08770;">2</span><span>, small / </span><span style="color:#d08770;">8</span><span>));
+</span><span>
+</span><span>	</span><span style="color:#b48ead;">vec3</span><span> gridCol = </span><span style="color:#b48ead;">vec3</span><span>(grid);
+</span><span>
+</span><span>	</span><span style="color:#b48ead;">float</span><span> mask = </span><span style="color:#96b5b4;">max</span><span>(axis.</span><span style="color:#bf616a;">x</span><span>, axis.</span><span style="color:#bf616a;">y</span><span>);
+</span><span>
+</span><span>	outColor = </span><span style="color:#b48ead;">vec4</span><span>(</span><span style="color:#96b5b4;">mix</span><span>(grid , axis, mask), </span><span style="color:#d08770;">0.0</span><span>);
+</span><span>}
+</span></code></pre>
+<h2 id="implementing-on-flat-blend">Implementing on flat-blend</h2>
+<p>Thanks to all of the refactoring I had done previously, adding in another render pass was pretty easy! Everything was pretty much a copy of the other render pass, besides using these vertices to cover the whole screen (and having nothing to do in the vertex shader).</p>
+<pre data-lang="rust" style="background-color:#2b303b;color:#c0c5ce;" class="language-rust "><code class="language-rust" data-lang="rust"><span style="color:#b48ead;">let</span><span> grid_vertices: Vec&lt;Vertex&gt; = vec![
+</span><span>    Vertex {
+</span><span>        position: [-</span><span style="color:#d08770;">1.0</span><span>, -</span><span style="color:#d08770;">1.0</span><span>],
+</span><span>    },
+</span><span>    Vertex {
+</span><span>        position: [</span><span style="color:#d08770;">1.0</span><span>, -</span><span style="color:#d08770;">1.0</span><span>],
+</span><span>    },
+</span><span>    Vertex {
+</span><span>        position: [-</span><span style="color:#d08770;">1.0</span><span>, </span><span style="color:#d08770;">1.0</span><span>],
+</span><span>    },
+</span><span>    Vertex {
+</span><span>        position: [</span><span style="color:#d08770;">1.0</span><span>, -</span><span style="color:#d08770;">1.0</span><span>],
+</span><span>    },
+</span><span>    Vertex {
+</span><span>        position: [-</span><span style="color:#d08770;">1.0</span><span>, </span><span style="color:#d08770;">1.0</span><span>],
+</span><span>    },
+</span><span>    Vertex {
+</span><span>        position: [</span><span style="color:#d08770;">1.0</span><span>, </span><span style="color:#d08770;">1.0</span><span>],
+</span><span>    },
+</span><span>];
+</span></code></pre>
+<p>The other render pass also had to be changed to write over the grid, but all that took was changing a value from <code>Clear</code> to <code>Load</code>.</p>
+<p>With these changes, we end up with our pink square on a grid 💃
+
+<figure>
+    <img alt="The same grid as before, now with a pink square on it" src=".&#x2F;flat-blend.png" width="100%" style="" />
+    <figcaption></figcaption>
+</figure></p>
+<p>This reveals a few issues:</p>
+<ol>
+<li>The grid size doesn't mean anything in comparison to the size of the square because the square is being scaled but the size of the grid is fixed.</li>
+<li>There's no way to shift the position of the &quot;camera&quot; in relation to the grid or the square.</li>
+<li>The grid is also off centre anyway because I've not added a uniform to input the viewport resolution.</li>
+</ol>
+<p>These are all things that need to be addressed. But I think the first I want to take care of is the camera positioning, which means it's time to start putting our meshes into &quot;objects&quot; 👻. That's for another time though, this has already taken ages for me to figure out!</p>
+<hr />
+<p><code>Movin' Out</code> by <code>Billy Joel</code> is today's song. My spreadsheets tell my I'll be able to afford a house by mid-2025, so I'll have to wait a bit to share the feeling.</p>
+<iframe style="border-radius:12px" src="https:&#x2F;&#x2F;open.spotify.com&#x2F;embed&#x2F;track&#x2F;16GUMo6u3D2qo9a19AkYct?utm_source=generator" width="100%" height="152" frameBorder="0" allowfullscreen=""
+    allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" loading="lazy"></iframe>
+    </div>
+
+    
+        <footer>
+            <hr>
+            <p>
+                
+                    Published by Samuel Gregson
+                
+                
+                    
+                    in <a href="https://zacxalot.github.io/categories/flat-blend/">Flat-Blend</a>
+                
+                
+                    and
+                    tagged
+                    
+                        <a href="https://zacxalot.github.io/tags/rust/">rust</a>
+                        
+                            
+                                
+                                    ,
+                                
+                            
+                        
+                    
+                        <a href="https://zacxalot.github.io/tags/blender/">blender</a>
+                        
+                            
+                                
+                                    ,
+                                
+                            
+                        
+                    
+                        <a href="https://zacxalot.github.io/tags/shadered/">shadered</a>
+                        
+                            
+                                
+                                    ,
+                                
+                            
+                        
+                    
+                        <a href="https://zacxalot.github.io/tags/vulkan/">vulkan</a>
+                        
+                            
+                                
+                                    and
+                                
+                            
+                        
+                    
+                        <a href="https://zacxalot.github.io/tags/shaders/">shaders</a>
+                        
+                            
+                        
+                    
+                
+            </p>
+            
+            
+        </footer>
+    
+</article>
+
+
+    </body>
+
+</html>

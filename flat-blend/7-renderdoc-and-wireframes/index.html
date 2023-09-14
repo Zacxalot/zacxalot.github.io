@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+      <meta http-equiv="X-UA-Compatible" content="IE=edge">
+      <meta http-equiv="content-type" content="text/html; charset=utf-8">
+      <meta name="google-site-verification" content="S_D6XT0jzn6m38pioQTiMnY2HFPuJUc3wtdV3CRtBEk" />
+      <script data-goatcounter="https://zacxalot.goatcounter.com/count"
+        async src="//gc.zgo.at/count.js"></script>
+
+      <!-- Enable responsiveness on mobile devices-->
+      <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1">
+
+      <title></title>
+
+      
+        <link rel="alternate" type="application/atom+xml" title="RSS" href="https://zacxalot.github.io/atom.xml">
+      
+
+      
+          <link rel="stylesheet" href="https://zacxalot.github.io/site.css">
+      
+
+      
+      
+    </head>
+
+    <body class="hack dark main container">
+        
+    
+        
+                
+                    <header>
+                        <nav itemscope itemtype="http://schema.org/SiteNavigationElement">
+                        
+                            <a itemprop="url"
+                               class=""
+                               href="https:&#x2F;&#x2F;zacxalot.github.io">
+                                <span itemprop="name">Home</span></a>
+                        
+                            <a itemprop="url"
+                               class=""
+                               href="https:&#x2F;&#x2F;zacxalot.github.io&#x2F;categories">
+                                <span itemprop="name">Categories</span></a>
+                        
+                            <a itemprop="url"
+                               class=""
+                               href="https:&#x2F;&#x2F;zacxalot.github.io&#x2F;tags">
+                                <span itemprop="name">Tags</span></a>
+                        
+                            <a itemprop="url"
+                               class=""
+                               href="https:&#x2F;&#x2F;github.com&#x2F;Zacxalot">
+                                <span itemprop="name">GitHub</span></a>
+                        
+                            <a itemprop="url"
+                               class=""
+                               href="https:&#x2F;&#x2F;www.linkedin.com&#x2F;in&#x2F;s-gregson&#x2F;">
+                                <span itemprop="name">LinkedIn</span></a>
+                        
+                        </nav>
+                    </header>
+                
+            
+    
+
+<article itemscope itemtype="http://schema.org/BlogPosting">
+    <header>
+        <h1 itemprop="headline">Renderdoc, Wireframes and Refactoring</h1>
+        <span class="muted">
+<svg style="margin-bottom:-3px" class="i-clock" viewBox="0 0 32 32" width="16" height="16" fill="none"
+    stroke="currentcolor" stroke-linecap="round" stroke-linejoin="round" stroke-width="6.25%">
+    <circle cx="16" cy="16" r="14" />
+    <path d="M16 8 L16 16 20 20" />
+</svg>
+<span>6 minute read</span>
+<svg style="margin-bottom: -3px" class="i-edit" viewBox="0 0 32 32" width="16" height="16" fill="none"
+    stroke="currentcolor" stroke-linecap="round" stroke-linejoin="round" stroke-width="6.25%">
+    <path d="M30 7 L25 2 5 22 3 29 10 27 Z M21 6 L26 11 Z M5 22 L10 27 Z" />
+</svg>
+
+Published: 2023-03-01
+</span>
+    </header>
+    <div itemprop="articleBody">
+      <p>Now that I've got my <code>BMesh</code> rendering, I think it would be nice to try and replicate some of the different viewport options Blender is capable of. More specifically, I'd like to implement a wireframe view.
+Before jumping straight to how it's done in Blender, I've tried getting it going myself.</p>
+<p>With a little bit of Duckduckgo-ing, I bumped into this, <a href="https://registry.khronos.org/vulkan/specs/1.3-extensions/man/html/VkPolygonMode.html">Vulkan Polygon Mode</a>. By setting this value to <code>VK_POLYGON_MODE_LINE</code> in the pipeline, instead of rendering the whole surface of each triangle, only the edges are drawn. I found the value in the Vulkano docs <a href="https://docs.rs/vulkano/latest/vulkano/pipeline/graphics/rasterization/enum.PolygonMode.html">here</a> and set it in my pipeline definition like so:</p>
+<pre data-lang="rust" style="background-color:#2b303b;color:#c0c5ce;" class="language-rust "><code class="language-rust" data-lang="rust"><span style="color:#b48ead;">let</span><span> rasterization_state = RasterizationState {
+</span><span>    cull_mode: StateMode::Fixed(CullMode::None),
+</span><span>    polygon_mode: PolygonMode::Line,
+</span><span>    ..Default::default()
+</span><span>};
+</span></code></pre>
+<p>Running with this change presented this: 🥳</p>
+
+<figure>
+    <img alt="A wireframe showing the triangles that make up the square" src=".&#x2F;wireframe.png" width="100%" style="" />
+    <figcaption>I wish everything I&#x27;ve done so far on this project was this easy</figcaption>
+</figure>
+<p>You may notice a bit of an issue with this, however. Looking at the wireframe of the same mesh in Blender, it is only rendering the edges of BMesh, not the edges of the triangles.</p>
+
+<figure>
+    <img alt="A wireframe showing the just the BMesh edges of a square in Blender" src=".&#x2F;blender-wireframe.png" width="100%" style="" />
+    <figcaption></figcaption>
+</figure>
+<p>This is how we want it, because this is how the <code>BMesh</code> data is stored, and this is all the user cares about whilst interacting with it.</p>
+<h2 id="renderdoc">Renderdoc</h2>
+<p>Again, before looking at how Blender does it, I tried searching the internet some more but practically everything I could find was about using <code>VK_POLYGON_MODE_LINE</code>. So I gave in, and loaded up one of my favorite programs, <a href="https://renderdoc.org/">Renderdoc</a>. If you've never come across it, Renderdoc is a graphics debugging tool that lets you see step by step how the GPU has processed a frame.</p>
+<p>Renderdoc has an overwhelming interface (looks like Java Swing but it's probably Qt), but I've managed to find all of the information I've needed from it so far. Importantly, I spotted that the pipeline is using the primitive topology of <code>Line List</code>, which I didn't even know existed! From here, I can also look at the shader code that produces the wireframe. I had a peek, and it seemed a bit overcomplicated for what I need, so I'll stick with what I've got for now.</p>
+
+<figure>
+    <img alt="Render doc showing the pipeline state" src=".&#x2F;renderdoc-1.png" width="100%" style="" />
+    <figcaption></figcaption>
+</figure>
+<p>The input into the vertex shader in Renderdoc was just a list of vertices, paired up to make a line. To get a line list from my <code>BMesh</code>, I used Rust's wonderful iterators to make cheeky function for it:</p>
+<pre data-lang="rust" style="background-color:#2b303b;color:#c0c5ce;" class="language-rust "><code class="language-rust" data-lang="rust"><span style="color:#b48ead;">pub fn </span><span style="color:#8fa1b3;">bm_edge_list</span><span>(</span><span style="color:#bf616a;">bmesh</span><span>: &amp;</span><span style="color:#b48ead;">mut</span><span> BMesh) -&gt; Vec&lt;Vertex&gt; {
+</span><span>    </span><span style="color:#b48ead;">unsafe </span><span>{
+</span><span>        bmesh
+</span><span>            .edges
+</span><span>            .</span><span style="color:#96b5b4;">iter</span><span>()
+</span><span>            .</span><span style="color:#96b5b4;">flat_map</span><span>(|(_, </span><span style="color:#bf616a;">edge</span><span>)| [(*edge.v0).vertex, (*edge.v1).vertex])
+</span><span>            .collect::&lt;Vec&lt;Vertex&gt;&gt;()
+</span><span>    }
+</span><span>}
+</span></code></pre>
+<p>Then, by setting the topology mode to Line List, and passing in only the vertices we get this: 🥳</p>
+
+<figure>
+    <img alt="A wireframe showing the just the BMesh edges of a square" src=".&#x2F;bmesh-wireframe.png" width="100%" style="" />
+    <figcaption></figcaption>
+</figure><h2 id="refactoring">Refactoring</h2>
+<p>By implementing the new wireframe display, I had to change the pipeline that renders our shapes to remove the input of indices. The <code>LineList</code> topology doesn't accept these (Or maybe it does, and I've just not made use of them).
+So that has pushed me into doing some refactoring.
+I knew it was coming, the base code I was using from the <a href="https://github.com/vulkano-rs/vulkano/blob/0.32.X/examples/src/bin/triangle-v1_3.rs">Vulkano example triangle</a> was understandably designed around just drawing a triangle.
+But that's just not going to cut it anymore!
+'
+I've probably done a terrible job of this, but without having written anything in Vulkan before, it's fair to accept it won't be even close to perfect on the first try.
+I've done two big things really.</p>
+<p>Firstly, I've moved all of the initialisation of Vulkan into its own initialisation function, which returns a <code>VulkanState</code>. This struct looks like this and will likely be subject to heavy change when I realise my refactoring is bad.</p>
+<pre data-lang="rust" style="background-color:#2b303b;color:#c0c5ce;" class="language-rust "><code class="language-rust" data-lang="rust"><span style="color:#b48ead;">pub struct </span><span>VulkanState {
+</span><span>    </span><span style="color:#b48ead;">pub </span><span style="color:#bf616a;">device</span><span>: Arc&lt;Device&gt;,
+</span><span>    </span><span style="color:#b48ead;">pub </span><span style="color:#bf616a;">surface</span><span>: Arc&lt;Surface&gt;,
+</span><span>    </span><span style="color:#b48ead;">pub </span><span style="color:#bf616a;">descriptor_set_allocator</span><span>: StandardDescriptorSetAllocator,
+</span><span>    </span><span style="color:#b48ead;">pub </span><span style="color:#bf616a;">command_buffer_allocator</span><span>: StandardCommandBufferAllocator,
+</span><span>    </span><span style="color:#b48ead;">pub </span><span style="color:#bf616a;">recreate_swapchain</span><span>: </span><span style="color:#b48ead;">bool</span><span>,
+</span><span>    </span><span style="color:#b48ead;">pub </span><span style="color:#bf616a;">previous_frame_end</span><span>: Option&lt;Box&lt;dyn GpuFuture&gt;&gt;,
+</span><span>    </span><span style="color:#b48ead;">pub </span><span style="color:#bf616a;">queue</span><span>: Arc&lt;Queue&gt;,
+</span><span>    </span><span style="color:#b48ead;">pub </span><span style="color:#bf616a;">vertex_buffers</span><span>: VertexBuffers,
+</span><span>    </span><span style="color:#b48ead;">pub </span><span style="color:#bf616a;">index_buffers</span><span>: IndexBuffers,
+</span><span>    </span><span style="color:#b48ead;">pub </span><span style="color:#bf616a;">shaders</span><span>: Arc&lt;LoadedShaders&gt;,
+</span><span>    </span><span style="color:#b48ead;">pub </span><span style="color:#bf616a;">swapchain</span><span>: Arc&lt;Swapchain&gt;,
+</span><span>    </span><span style="color:#b48ead;">pub </span><span style="color:#bf616a;">swapchain_images</span><span>: Vec&lt;Arc&lt;SwapchainImage&gt;&gt;,
+</span><span>    </span><span style="color:#b48ead;">pub </span><span style="color:#bf616a;">viewport</span><span>: Viewport,
+</span><span>    </span><span style="color:#b48ead;">pub </span><span style="color:#bf616a;">attachment_images</span><span>: Arc&lt;AttachmentImageMap&gt;,
+</span><span>    </span><span style="color:#b48ead;">pub </span><span style="color:#bf616a;">memory_allocator</span><span>: Arc&lt;GenericMemoryAllocator&lt;Arc&lt;FreeListAllocator&gt;&gt;&gt;,
+</span><span>    </span><span style="color:#b48ead;">pub </span><span style="color:#bf616a;">render_passes</span><span>: Arc&lt;RenderPasses&gt;,
+</span><span>    </span><span style="color:#b48ead;">pub </span><span style="color:#bf616a;">pipelines</span><span>: Arc&lt;Pipelines&gt;,
+</span><span>    </span><span style="color:#b48ead;">pub </span><span style="color:#bf616a;">frame_buffers</span><span>: Arc&lt;FrameBufferMap&gt;,
+</span><span>    </span><span style="color:#b48ead;">pub </span><span style="color:#bf616a;">uniform_buffer</span><span>: Arc&lt;CpuBufferPool&lt;Data&gt;&gt;,
+</span><span>}
+</span></code></pre>
+<p><code>Arc</code>'s for days!
+I think this is pretty cool though, instead of having to pass everything around individually we can now pass in an <code>Arc</code> to the <code>VulkanState</code> and let the function grab what it needs.</p>
+<p>The second thing I did was to move the creation of shaders, render passes, pipelines, frame buffers and attachment images into their own files and have loaders for each that return an <a href="https://crates.io/crates/enum-map">EnumMap</a> for each.
+This makes keeping track of what what each resource is tied to and for really easy.</p>
+<p>I also experimented with wrapping the values of the <code>EnumMap</code>'s with <code>Option</code> for the <code>VertexBuffers</code> and <code>IndexBuffers</code>.
+This is important for these buffers as making an empty vertex buffer is apparently very naughty (<code>'main' panicked at 'assertion failed: size != 0'</code>), so unless we have some vertices ready for each of our vertex buffers when creating our Vulkan environment, we can't make them.</p>
+<p>Here is the type definition and initialisation of the vertex buffers:</p>
+<pre data-lang="rust" style="background-color:#2b303b;color:#c0c5ce;" class="language-rust "><code class="language-rust" data-lang="rust"><span style="color:#65737e;">// buffers.rs, terrible name
+</span><span style="color:#b48ead;">pub type </span><span>VertexBuffers = EnumMap&lt;VertexBufferKey, Option&lt;Arc&lt;CpuAccessibleBuffer&lt;[Vertex]&gt;&gt;&gt;&gt;;
+</span><span>
+</span><span style="color:#65737e;">//init.rs
+</span><span>vertex_buffers: enum_map! {_ =&gt; None}
+</span></code></pre>
+<p>And here is the render pass definition <code>EnumMap</code>. The rest of the <code>EnumMap</code>'s are similar to this.</p>
+<pre data-lang="rust" style="background-color:#2b303b;color:#c0c5ce;" class="language-rust "><code class="language-rust" data-lang="rust"><span style="color:#65737e;">// render_pass_loader.rs
+</span><span>#[</span><span style="color:#bf616a;">derive</span><span>(Enum)]
+</span><span style="color:#b48ead;">pub enum </span><span>RenderPassKeys {
+</span><span>    Solid,
+</span><span>}
+</span><span>
+</span><span style="color:#b48ead;">pub type </span><span>RenderPasses = EnumMap&lt;RenderPassKeys, Arc&lt;RenderPass&gt;&gt;;
+</span><span>
+</span><span style="color:#b48ead;">pub fn </span><span style="color:#8fa1b3;">load_render_passes</span><span>(</span><span style="color:#bf616a;">device</span><span>: Arc&lt;Device&gt;, </span><span style="color:#bf616a;">format</span><span>: Format) -&gt; Arc&lt;RenderPasses&gt; {
+</span><span>    Arc::new(enum_map! {
+</span><span>        RenderPassKeys::Solid =&gt; </span><span style="color:#96b5b4;">solid_draw_pass</span><span>(device.</span><span style="color:#96b5b4;">clone</span><span>(), format).</span><span style="color:#96b5b4;">unwrap</span><span>()
+</span><span>    })
+</span><span>}
+</span></code></pre>
+<p>To top it all off, I've cleared all of the warnings ⚠️🥳</p>
+<p>Doing all of this refactoring took hours and I'm glad it's done for now. Plenty of room for progress now!</p>
+<p>Next up, a grid!</p>
+<hr />
+<p>I'm not all that into <code>Radiohead</code> but I like <code>Sit Down. Stand Up</code>, it's just 3 minutes of buildup and then Thom Yorke expressing peak lyricism.
+<iframe style="border-radius:12px" src="https:&#x2F;&#x2F;open.spotify.com&#x2F;embed&#x2F;track&#x2F;6MKWCO8g2W05UcaFyfQ6Cl?utm_source=generator" width="100%" height="152" frameBorder="0" allowfullscreen=""
+    allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" loading="lazy"></iframe></p>
+
+    </div>
+
+    
+        <footer>
+            <hr>
+            <p>
+                
+                    Published by Samuel Gregson
+                
+                
+                    
+                    in <a href="https://zacxalot.github.io/categories/flat-blend/">Flat-Blend</a>
+                
+                
+                    and
+                    tagged
+                    
+                        <a href="https://zacxalot.github.io/tags/rust/">rust</a>
+                        
+                            
+                                
+                                    ,
+                                
+                            
+                        
+                    
+                        <a href="https://zacxalot.github.io/tags/blender/">blender</a>
+                        
+                            
+                                
+                                    ,
+                                
+                            
+                        
+                    
+                        <a href="https://zacxalot.github.io/tags/renderdoc/">renderdoc</a>
+                        
+                            
+                                
+                                    ,
+                                
+                            
+                        
+                    
+                        <a href="https://zacxalot.github.io/tags/vulkan/">vulkan</a>
+                        
+                            
+                                
+                                    and
+                                
+                            
+                        
+                    
+                        <a href="https://zacxalot.github.io/tags/refactoring/">refactoring</a>
+                        
+                            
+                        
+                    
+                
+            </p>
+            
+            
+        </footer>
+    
+</article>
+
+
+    </body>
+
+</html>

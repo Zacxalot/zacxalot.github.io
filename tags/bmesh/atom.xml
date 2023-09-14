@@ -1,0 +1,373 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom" xml:lang="en">
+	<title> - bmesh</title>
+	<link href="https://zacxalot.github.io/tags/bmesh/atom.xml" rel="self" type="application/atom+xml"/>
+  <link href="https://zacxalot.github.io"/>
+	<generator uri="https://www.getzola.org/">Zola</generator>
+	<updated>2023-02-26T00:00:00+00:00</updated>
+	<id>https://zacxalot.github.io/tags/bmesh/atom.xml</id>
+	<entry xml:lang="en">
+		<title>Rendering BMesh</title>
+		<published>2023-02-26T00:00:00+00:00</published>
+		<updated>2023-02-26T00:00:00+00:00</updated>
+		<link rel="alternate" href="https://zacxalot.github.io/flat-blend/6-bmesh-to-triangles/" type="text/html"/>
+		<id>https://zacxalot.github.io/flat-blend/6-bmesh-to-triangles/</id>
+		<content type="html">&lt;p&gt;Another short post from me this week. I&#x27;ve made some progress on getting &lt;code&gt;BMesh&lt;&#x2F;code&gt; converted into a list of vertices and triangles for Vulkan to eat up.&lt;&#x2F;p&gt;
+&lt;p&gt;Here is the function I&#x27;ve made for it.&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;rust&quot; style=&quot;background-color:#2b303b;color:#c0c5ce;&quot; class=&quot;language-rust &quot;&gt;&lt;code class=&quot;language-rust&quot; data-lang=&quot;rust&quot;&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;pub fn &lt;&#x2F;span&gt;&lt;span style=&quot;color:#8fa1b3;&quot;&gt;bm_triangulate&lt;&#x2F;span&gt;&lt;span&gt;(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;bmesh&lt;&#x2F;span&gt;&lt;span&gt;: &amp;amp;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;mut&lt;&#x2F;span&gt;&lt;span&gt; BMesh) -&amp;gt; (Vec&amp;lt;Vertex&amp;gt;, Vec&amp;lt;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;u32&lt;&#x2F;span&gt;&lt;span&gt;&amp;gt;) {
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;let mut&lt;&#x2F;span&gt;&lt;span&gt; all_bm_vertices: Vec&amp;lt;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;*mut&lt;&#x2F;span&gt;&lt;span&gt; BMVert&amp;gt; = vec![];
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;let mut&lt;&#x2F;span&gt;&lt;span&gt; all_indices: Vec&amp;lt;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;u32&lt;&#x2F;span&gt;&lt;span&gt;&amp;gt; = vec![];
+&lt;&#x2F;span&gt;&lt;span&gt;
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;for &lt;&#x2F;span&gt;&lt;span&gt;(_, face) in &amp;amp;bmesh.faces {
+&lt;&#x2F;span&gt;&lt;span&gt;        &lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;unsafe &lt;&#x2F;span&gt;&lt;span&gt;{
+&lt;&#x2F;span&gt;&lt;span&gt;            &lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;let&lt;&#x2F;span&gt;&lt;span&gt; vertices = BMLoopIterator::new(face.loop_start.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#96b5b4;&quot;&gt;unwrap&lt;&#x2F;span&gt;&lt;span&gt;())
+&lt;&#x2F;span&gt;&lt;span&gt;                .&lt;&#x2F;span&gt;&lt;span style=&quot;color:#96b5b4;&quot;&gt;map&lt;&#x2F;span&gt;&lt;span&gt;(|&lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;l&lt;&#x2F;span&gt;&lt;span&gt;| (*l).vertex)
+&lt;&#x2F;span&gt;&lt;span&gt;                .collect::&amp;lt;Vec&amp;lt;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;*mut&lt;&#x2F;span&gt;&lt;span&gt; BMVert&amp;gt;&amp;gt;();
+&lt;&#x2F;span&gt;&lt;span&gt;
+&lt;&#x2F;span&gt;&lt;span&gt;            &lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;let&lt;&#x2F;span&gt;&lt;span&gt; flattened_verts = vertices
+&lt;&#x2F;span&gt;&lt;span&gt;                .&lt;&#x2F;span&gt;&lt;span style=&quot;color:#96b5b4;&quot;&gt;iter&lt;&#x2F;span&gt;&lt;span&gt;()
+&lt;&#x2F;span&gt;&lt;span&gt;                .&lt;&#x2F;span&gt;&lt;span style=&quot;color:#96b5b4;&quot;&gt;flat_map&lt;&#x2F;span&gt;&lt;span&gt;(|&lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;v&lt;&#x2F;span&gt;&lt;span&gt;| (**v).vertex.position)
+&lt;&#x2F;span&gt;&lt;span&gt;                .collect::&amp;lt;Vec&amp;lt;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;f32&lt;&#x2F;span&gt;&lt;span&gt;&amp;gt;&amp;gt;();
+&lt;&#x2F;span&gt;&lt;span&gt;
+&lt;&#x2F;span&gt;&lt;span&gt;            &lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;let&lt;&#x2F;span&gt;&lt;span&gt; indices = earcutr::earcut(&amp;amp;flattened_verts, &amp;amp;[], &lt;&#x2F;span&gt;&lt;span style=&quot;color:#d08770;&quot;&gt;2&lt;&#x2F;span&gt;&lt;span&gt;).&lt;&#x2F;span&gt;&lt;span style=&quot;color:#96b5b4;&quot;&gt;unwrap&lt;&#x2F;span&gt;&lt;span&gt;();
+&lt;&#x2F;span&gt;&lt;span&gt;
+&lt;&#x2F;span&gt;&lt;span&gt;            &lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;for&lt;&#x2F;span&gt;&lt;span&gt; index in indices {
+&lt;&#x2F;span&gt;&lt;span&gt;                &lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;if let &lt;&#x2F;span&gt;&lt;span&gt;Some(position) = all_bm_vertices
+&lt;&#x2F;span&gt;&lt;span&gt;                    .&lt;&#x2F;span&gt;&lt;span style=&quot;color:#96b5b4;&quot;&gt;iter&lt;&#x2F;span&gt;&lt;span&gt;()
+&lt;&#x2F;span&gt;&lt;span&gt;                    .&lt;&#x2F;span&gt;&lt;span style=&quot;color:#96b5b4;&quot;&gt;position&lt;&#x2F;span&gt;&lt;span&gt;(|&lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;val&lt;&#x2F;span&gt;&lt;span&gt;| val == &amp;amp;vertices[index])
+&lt;&#x2F;span&gt;&lt;span&gt;                {
+&lt;&#x2F;span&gt;&lt;span&gt;                    all_indices.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#96b5b4;&quot;&gt;push&lt;&#x2F;span&gt;&lt;span&gt;(position as &lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;u32&lt;&#x2F;span&gt;&lt;span&gt;);
+&lt;&#x2F;span&gt;&lt;span&gt;                } &lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;else &lt;&#x2F;span&gt;&lt;span&gt;{
+&lt;&#x2F;span&gt;&lt;span&gt;                    all_bm_vertices.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#96b5b4;&quot;&gt;push&lt;&#x2F;span&gt;&lt;span&gt;(vertices[index]);
+&lt;&#x2F;span&gt;&lt;span&gt;                    all_indices.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#96b5b4;&quot;&gt;push&lt;&#x2F;span&gt;&lt;span&gt;((all_bm_vertices.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#96b5b4;&quot;&gt;len&lt;&#x2F;span&gt;&lt;span&gt;() - &lt;&#x2F;span&gt;&lt;span style=&quot;color:#d08770;&quot;&gt;1&lt;&#x2F;span&gt;&lt;span&gt;) as &lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;u32&lt;&#x2F;span&gt;&lt;span&gt;);
+&lt;&#x2F;span&gt;&lt;span&gt;                }
+&lt;&#x2F;span&gt;&lt;span&gt;            }
+&lt;&#x2F;span&gt;&lt;span&gt;        }
+&lt;&#x2F;span&gt;&lt;span&gt;    }
+&lt;&#x2F;span&gt;&lt;span&gt;
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;unsafe &lt;&#x2F;span&gt;&lt;span&gt;{
+&lt;&#x2F;span&gt;&lt;span&gt;        &lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;let&lt;&#x2F;span&gt;&lt;span&gt; all_vertices = all_bm_vertices
+&lt;&#x2F;span&gt;&lt;span&gt;            .&lt;&#x2F;span&gt;&lt;span style=&quot;color:#96b5b4;&quot;&gt;iter&lt;&#x2F;span&gt;&lt;span&gt;()
+&lt;&#x2F;span&gt;&lt;span&gt;            .&lt;&#x2F;span&gt;&lt;span style=&quot;color:#96b5b4;&quot;&gt;map&lt;&#x2F;span&gt;&lt;span&gt;(|&lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;v&lt;&#x2F;span&gt;&lt;span&gt;| (*(*v)).vertex)
+&lt;&#x2F;span&gt;&lt;span&gt;            .collect::&amp;lt;Vec&amp;lt;Vertex&amp;gt;&amp;gt;();
+&lt;&#x2F;span&gt;&lt;span&gt;        (all_vertices, all_indices)
+&lt;&#x2F;span&gt;&lt;span&gt;    }
+&lt;&#x2F;span&gt;&lt;span&gt;}
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;Per face (not always a triangle), it runs the ear cutting algorithm from the &lt;a href=&quot;https:&#x2F;&#x2F;crates.io&#x2F;crates&#x2F;earcutr&quot;&gt;earcutr&lt;&#x2F;a&gt;.
+It then combines the results of all of these into a &lt;code&gt;Vec&lt;&#x2F;code&gt; of &lt;code&gt;Vertex&lt;&#x2F;code&gt;&#x27;s and a &lt;code&gt;Vec&lt;&#x2F;code&gt; of indices.
+These can then be put directly into Vertex and Index buffers.&lt;&#x2F;p&gt;
+&lt;p&gt;I had a look through the Blender code to try and find out how they do it, but I couldn&#x27;t find it. I did however see on the &lt;a href=&quot;https:&#x2F;&#x2F;docs.blender.org&#x2F;manual&#x2F;en&#x2F;latest&#x2F;modeling&#x2F;modifiers&#x2F;generate&#x2F;triangulate.html&quot;&gt;triangulate modifier docs&lt;&#x2F;a&gt; that the clip method uses the ear clipping algorithm, which it mentions &amp;quot;gives similar results to the tessellation used for the viewport rendering&amp;quot;. Perfect!&lt;&#x2F;p&gt;
+&lt;p&gt;Thankfully the &lt;code&gt;earcutr&lt;&#x2F;code&gt; crate exists so I don&#x27;t have to re-invent any wheels, but I had a look around for how the algorithm works anyway. I found this very &lt;a href=&quot;https:&#x2F;&#x2F;www.personal.kent.edu&#x2F;~rmuhamma&#x2F;Compgeometry&#x2F;MyCG&#x2F;TwoEar&#x2F;two-ear.htm&quot;&gt;old but endearing website&lt;&#x2F;a&gt; which explains a bit, the &lt;a href=&quot;https:&#x2F;&#x2F;github.com&#x2F;donbright&#x2F;earcutr&quot;&gt;github repo for earcutr&lt;&#x2F;a&gt; which have some good explainations and fun ascii diagrams, and &lt;a href=&quot;https:&#x2F;&#x2F;twohiccups.github.io&#x2F;Ear-Clipping&#x2F;&quot;&gt;this page here&lt;&#x2F;a&gt; which provides a lovely visualisation of what&#x27;s going on. I&#x27;ll be honest, I&#x27;m still not 100% sure how it works, but it does, and that&#x27;s all I need.&lt;&#x2F;p&gt;
+&lt;p&gt;Here is the fruit of my labour, another square 🙃. I&#x27;ve changed the colours to be a little more on brand at least.
+
+&lt;figure&gt;
+    &lt;img alt=&quot;A pink square in a window&quot; src=&quot;.&amp;#x2F;screen.png&quot; width=&quot;100%&quot; style=&quot;&quot; &#x2F;&gt;
+    &lt;figcaption&gt;&lt;&#x2F;figcaption&gt;
+&lt;&#x2F;figure&gt;&lt;&#x2F;p&gt;
+&lt;h2 id=&quot;bmesh-in-motion&quot;&gt;BMesh in Motion&lt;&#x2F;h2&gt;
+&lt;p&gt;To make it feel like I&#x27;ve actually done something, I have made it so I can change the position of the bottom left vertex using the mouse.
+I&#x27;ve probably done this in a way that is a crime against Vulkan, but I can worry about a proper implementation later. Here it is:&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;rust&quot; style=&quot;background-color:#2b303b;color:#c0c5ce;&quot; class=&quot;language-rust &quot;&gt;&lt;code class=&quot;language-rust&quot; data-lang=&quot;rust&quot;&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;let&lt;&#x2F;span&gt;&lt;span&gt; window = surface.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#96b5b4;&quot;&gt;object&lt;&#x2F;span&gt;&lt;span&gt;().&lt;&#x2F;span&gt;&lt;span style=&quot;color:#96b5b4;&quot;&gt;unwrap&lt;&#x2F;span&gt;&lt;span&gt;().downcast_ref::&amp;lt;Window&amp;gt;().&lt;&#x2F;span&gt;&lt;span style=&quot;color:#96b5b4;&quot;&gt;unwrap&lt;&#x2F;span&gt;&lt;span&gt;();
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;let&lt;&#x2F;span&gt;&lt;span&gt; width = window.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#96b5b4;&quot;&gt;inner_size&lt;&#x2F;span&gt;&lt;span&gt;().width as &lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;f64&lt;&#x2F;span&gt;&lt;span&gt;;
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;let&lt;&#x2F;span&gt;&lt;span&gt; height = window.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#96b5b4;&quot;&gt;inner_size&lt;&#x2F;span&gt;&lt;span&gt;().height as &lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;f64&lt;&#x2F;span&gt;&lt;span&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;let&lt;&#x2F;span&gt;&lt;span&gt; rel_x = &lt;&#x2F;span&gt;&lt;span style=&quot;color:#d08770;&quot;&gt;6.0 &lt;&#x2F;span&gt;&lt;span&gt;* ((position.x &#x2F; width) * &lt;&#x2F;span&gt;&lt;span style=&quot;color:#d08770;&quot;&gt;2.0 &lt;&#x2F;span&gt;&lt;span&gt;- &lt;&#x2F;span&gt;&lt;span style=&quot;color:#d08770;&quot;&gt;1.0&lt;&#x2F;span&gt;&lt;span&gt;);
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;let&lt;&#x2F;span&gt;&lt;span&gt; rel_y = &lt;&#x2F;span&gt;&lt;span style=&quot;color:#d08770;&quot;&gt;6.0 &lt;&#x2F;span&gt;&lt;span&gt;* (&lt;&#x2F;span&gt;&lt;span style=&quot;color:#d08770;&quot;&gt;1.0 &lt;&#x2F;span&gt;&lt;span&gt;- (position.y &#x2F; height) * &lt;&#x2F;span&gt;&lt;span style=&quot;color:#d08770;&quot;&gt;2.0&lt;&#x2F;span&gt;&lt;span&gt;);
+&lt;&#x2F;span&gt;&lt;span&gt;
+&lt;&#x2F;span&gt;&lt;span&gt;square_mesh
+&lt;&#x2F;span&gt;&lt;span&gt;    .vertices
+&lt;&#x2F;span&gt;&lt;span&gt;    .&lt;&#x2F;span&gt;&lt;span style=&quot;color:#96b5b4;&quot;&gt;iter_mut&lt;&#x2F;span&gt;&lt;span&gt;()
+&lt;&#x2F;span&gt;&lt;span&gt;    .&lt;&#x2F;span&gt;&lt;span style=&quot;color:#96b5b4;&quot;&gt;next&lt;&#x2F;span&gt;&lt;span&gt;()
+&lt;&#x2F;span&gt;&lt;span&gt;    .&lt;&#x2F;span&gt;&lt;span style=&quot;color:#96b5b4;&quot;&gt;unwrap&lt;&#x2F;span&gt;&lt;span&gt;()
+&lt;&#x2F;span&gt;&lt;span&gt;    .&lt;&#x2F;span&gt;&lt;span style=&quot;color:#d08770;&quot;&gt;1
+&lt;&#x2F;span&gt;&lt;span&gt;    .vertex
+&lt;&#x2F;span&gt;&lt;span&gt;    .position = [rel_x as &lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;f32&lt;&#x2F;span&gt;&lt;span&gt;, rel_y as &lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;f32&lt;&#x2F;span&gt;&lt;span&gt;];
+&lt;&#x2F;span&gt;&lt;span&gt;
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;let &lt;&#x2F;span&gt;&lt;span&gt;(vertices, indices) = &lt;&#x2F;span&gt;&lt;span style=&quot;color:#96b5b4;&quot;&gt;bm_triangulate&lt;&#x2F;span&gt;&lt;span&gt;(&amp;amp;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;mut&lt;&#x2F;span&gt;&lt;span&gt; square_mesh);
+&lt;&#x2F;span&gt;&lt;span&gt;
+&lt;&#x2F;span&gt;&lt;span&gt;vertex_buffer = CpuAccessibleBuffer::from_iter(
+&lt;&#x2F;span&gt;&lt;span&gt;    &amp;amp;memory_allocator,
+&lt;&#x2F;span&gt;&lt;span&gt;    BufferUsage {
+&lt;&#x2F;span&gt;&lt;span&gt;        vertex_buffer: &lt;&#x2F;span&gt;&lt;span style=&quot;color:#d08770;&quot;&gt;true&lt;&#x2F;span&gt;&lt;span&gt;,
+&lt;&#x2F;span&gt;&lt;span&gt;        ..BufferUsage::empty()
+&lt;&#x2F;span&gt;&lt;span&gt;    },
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#d08770;&quot;&gt;false&lt;&#x2F;span&gt;&lt;span&gt;,
+&lt;&#x2F;span&gt;&lt;span&gt;    vertices,
+&lt;&#x2F;span&gt;&lt;span&gt;)
+&lt;&#x2F;span&gt;&lt;span&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#96b5b4;&quot;&gt;unwrap&lt;&#x2F;span&gt;&lt;span&gt;();
+&lt;&#x2F;span&gt;&lt;span&gt;
+&lt;&#x2F;span&gt;&lt;span&gt;index_buffer = CpuAccessibleBuffer::from_iter(
+&lt;&#x2F;span&gt;&lt;span&gt;    &amp;amp;memory_allocator,
+&lt;&#x2F;span&gt;&lt;span&gt;    BufferUsage {
+&lt;&#x2F;span&gt;&lt;span&gt;        index_buffer: &lt;&#x2F;span&gt;&lt;span style=&quot;color:#d08770;&quot;&gt;true&lt;&#x2F;span&gt;&lt;span&gt;,
+&lt;&#x2F;span&gt;&lt;span&gt;        ..BufferUsage::empty()
+&lt;&#x2F;span&gt;&lt;span&gt;    },
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#d08770;&quot;&gt;false&lt;&#x2F;span&gt;&lt;span&gt;,
+&lt;&#x2F;span&gt;&lt;span&gt;    indices,
+&lt;&#x2F;span&gt;&lt;span&gt;)
+&lt;&#x2F;span&gt;&lt;span&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#96b5b4;&quot;&gt;unwrap&lt;&#x2F;span&gt;&lt;span&gt;();
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;Got some magic numbers in there (6.0) to scale it to be almost right 🤮.&lt;&#x2F;p&gt;
+&lt;p&gt;This at least gave me a chance to look at the &lt;a href=&quot;https:&#x2F;&#x2F;crates.io&#x2F;crates&#x2F;winit&quot;&gt;winit&lt;&#x2F;a&gt; crate&#x27;s event handling. It&#x27;s pretty cool!
+Everything is in Enums so it&#x27;s really nice to work with. Getting the position of the cursor after it&#x27;s been moved is as simple as this:&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;rust&quot; style=&quot;background-color:#2b303b;color:#c0c5ce;&quot; class=&quot;language-rust &quot;&gt;&lt;code class=&quot;language-rust&quot; data-lang=&quot;rust&quot;&gt;&lt;span&gt;Event::WindowEvent {
+&lt;&#x2F;span&gt;&lt;span&gt;    event: WindowEvent::CursorMoved { position, .. },
+&lt;&#x2F;span&gt;&lt;span&gt;    ..
+&lt;&#x2F;span&gt;&lt;span&gt;} =&amp;gt; {
+&lt;&#x2F;span&gt;&lt;span&gt;    println!(&amp;quot;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#d08770;&quot;&gt;{:?}&lt;&#x2F;span&gt;&lt;span&gt;&amp;quot;, position)
+&lt;&#x2F;span&gt;&lt;span&gt;}
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;That&#x27;s all for now, here&#x27;s a short video of the moving vertex 👀.
+
+&lt;video width=&quot;100%&quot; alt=&quot;A pink square in a window with it&amp;#x27;s bottom left vertex moving&quot; autoplay loop&gt;
+
+    &lt;source src=&quot;.&amp;#x2F;video.webm&quot; type=&quot;video&#x2F;mp4&quot;&gt;
+
+&lt;&#x2F;video&gt;&lt;&#x2F;p&gt;
+&lt;hr &#x2F;&gt;
+&lt;p&gt;I&#x27;ve been really getting into &lt;code&gt;Faith No More&lt;&#x2F;code&gt; recently. &lt;code&gt;Falling To Pieces&lt;&#x2F;code&gt; is one of my favourites. If you don&#x27;t like this, listen to anything else off &lt;code&gt;The Real Thing&lt;&#x2F;code&gt;, there&#x27;s some top stuff in there.
+&lt;iframe style=&quot;border-radius:12px&quot; src=&quot;https:&amp;#x2F;&amp;#x2F;open.spotify.com&amp;#x2F;embed&amp;#x2F;track&amp;#x2F;20nb0Wl1yqoEERbUSILuG1?utm_source=generator&quot; width=&quot;100%&quot; height=&quot;152&quot; frameBorder=&quot;0&quot; allowfullscreen=&quot;&quot;
+    allow=&quot;autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture&quot; loading=&quot;lazy&quot;&gt;&lt;&#x2F;iframe&gt;&lt;&#x2F;p&gt;
+</content>
+	</entry>
+	<entry xml:lang="en">
+		<title>Slab to the rescue!</title>
+		<published>2023-02-14T00:00:00+00:00</published>
+		<updated>2023-02-14T00:00:00+00:00</updated>
+		<link rel="alternate" href="https://zacxalot.github.io/flat-blend/5-slab-to-the-rescue/" type="text/html"/>
+		<id>https://zacxalot.github.io/flat-blend/5-slab-to-the-rescue/</id>
+		<content type="html">&lt;p&gt;I&#x27;m back onto my flat-blend project and have continued implementing &lt;code&gt;BMesh&lt;&#x2F;code&gt; in Rust.
+There&#x27;s some stuff I&#x27;m still yet to understand the purpose of, &lt;code&gt;PhantomData&lt;&#x2F;code&gt; being a big one, but there&#x27;s also quite a bit I think I&#x27;ve got right, for now.&lt;&#x2F;p&gt;
+&lt;p&gt;I&#x27;ve gotten rid of all of the &lt;code&gt;ManuallyDrop&lt;&#x2F;code&gt; wrappers, which I had a feeling were the wrong thing to be using at the time I was writing them but I knew no better. Instead I&#x27;m using an allocator called &lt;a href=&quot;https:&#x2F;&#x2F;crates.io&#x2F;crates&#x2F;slab&quot;&gt;Slab&lt;&#x2F;a&gt;. With this you can create data of a single type, have raw pointers to the data without it moving and destroy the data when you&#x27;re done with it.&lt;&#x2F;p&gt;
+&lt;p&gt;So now my &lt;code&gt;BMesh&lt;&#x2F;code&gt; struct actually has ownership of the verts, edges, faces and loops, which is the way I think it should have been from the start.&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;rust&quot; style=&quot;background-color:#2b303b;color:#c0c5ce;&quot; class=&quot;language-rust &quot;&gt;&lt;code class=&quot;language-rust&quot; data-lang=&quot;rust&quot;&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;pub struct &lt;&#x2F;span&gt;&lt;span&gt;BMesh {
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;pub &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;vertices&lt;&#x2F;span&gt;&lt;span&gt;: Slab&amp;lt;BMVert&amp;gt;,
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;pub &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;edges&lt;&#x2F;span&gt;&lt;span&gt;: Slab&amp;lt;BMEdge&amp;gt;,
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;pub &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;loops&lt;&#x2F;span&gt;&lt;span&gt;: Slab&amp;lt;BMLoop&amp;gt;,
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;pub &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;faces&lt;&#x2F;span&gt;&lt;span&gt;: Slab&amp;lt;BMFace&amp;gt;,
+&lt;&#x2F;span&gt;&lt;span&gt;}
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;Here&#x27;s how we create and kill verts now too.&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;rust&quot; style=&quot;background-color:#2b303b;color:#c0c5ce;&quot; class=&quot;language-rust &quot;&gt;&lt;code class=&quot;language-rust&quot; data-lang=&quot;rust&quot;&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;pub fn &lt;&#x2F;span&gt;&lt;span style=&quot;color:#8fa1b3;&quot;&gt;bm_vert_create&lt;&#x2F;span&gt;&lt;span&gt;(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;bmesh&lt;&#x2F;span&gt;&lt;span&gt;: &amp;amp;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;mut&lt;&#x2F;span&gt;&lt;span&gt; BMesh) -&amp;gt; &lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;*mut&lt;&#x2F;span&gt;&lt;span&gt; BMVert {
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;let&lt;&#x2F;span&gt;&lt;span&gt; v_index = bmesh.vertices.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#96b5b4;&quot;&gt;insert&lt;&#x2F;span&gt;&lt;span&gt;(BMVert::from((&lt;&#x2F;span&gt;&lt;span style=&quot;color:#d08770;&quot;&gt;0.0&lt;&#x2F;span&gt;&lt;span&gt;, &lt;&#x2F;span&gt;&lt;span style=&quot;color:#d08770;&quot;&gt;0.0&lt;&#x2F;span&gt;&lt;span&gt;)));
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;let&lt;&#x2F;span&gt;&lt;span&gt; v = bmesh.vertices.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#96b5b4;&quot;&gt;get_mut&lt;&#x2F;span&gt;&lt;span&gt;(v_index).&lt;&#x2F;span&gt;&lt;span style=&quot;color:#96b5b4;&quot;&gt;unwrap&lt;&#x2F;span&gt;&lt;span&gt;();
+&lt;&#x2F;span&gt;&lt;span&gt;    v.slab_index = v_index;
+&lt;&#x2F;span&gt;&lt;span&gt;
+&lt;&#x2F;span&gt;&lt;span&gt;    v
+&lt;&#x2F;span&gt;&lt;span&gt;}
+&lt;&#x2F;span&gt;&lt;span&gt;
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;pub fn &lt;&#x2F;span&gt;&lt;span style=&quot;color:#8fa1b3;&quot;&gt;bm_vert_kill&lt;&#x2F;span&gt;&lt;span&gt;(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;bmesh&lt;&#x2F;span&gt;&lt;span&gt;: &amp;amp;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;mut&lt;&#x2F;span&gt;&lt;span&gt; BMesh, &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;vert&lt;&#x2F;span&gt;&lt;span&gt;: &lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;*mut&lt;&#x2F;span&gt;&lt;span&gt; BMVert) {
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;unsafe &lt;&#x2F;span&gt;&lt;span&gt;{
+&lt;&#x2F;span&gt;&lt;span&gt;        &lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;while let &lt;&#x2F;span&gt;&lt;span&gt;Some(edge) = (*vert).edge {
+&lt;&#x2F;span&gt;&lt;span&gt;            &lt;&#x2F;span&gt;&lt;span style=&quot;color:#96b5b4;&quot;&gt;bm_edge_kill&lt;&#x2F;span&gt;&lt;span&gt;(bmesh, edge);
+&lt;&#x2F;span&gt;&lt;span&gt;        }
+&lt;&#x2F;span&gt;&lt;span&gt;
+&lt;&#x2F;span&gt;&lt;span&gt;        &lt;&#x2F;span&gt;&lt;span style=&quot;color:#96b5b4;&quot;&gt;bm_kill_only_vert&lt;&#x2F;span&gt;&lt;span&gt;(bmesh, vert);
+&lt;&#x2F;span&gt;&lt;span&gt;    }
+&lt;&#x2F;span&gt;&lt;span&gt;}
+&lt;&#x2F;span&gt;&lt;span&gt;
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;pub fn &lt;&#x2F;span&gt;&lt;span style=&quot;color:#8fa1b3;&quot;&gt;bm_kill_only_vert&lt;&#x2F;span&gt;&lt;span&gt;(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;bmesh&lt;&#x2F;span&gt;&lt;span&gt;: &amp;amp;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;mut&lt;&#x2F;span&gt;&lt;span&gt; BMesh, &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;vert&lt;&#x2F;span&gt;&lt;span&gt;: &lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;*mut&lt;&#x2F;span&gt;&lt;span&gt; BMVert) {
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;unsafe &lt;&#x2F;span&gt;&lt;span&gt;{
+&lt;&#x2F;span&gt;&lt;span&gt;        bmesh.vertices.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#96b5b4;&quot;&gt;remove&lt;&#x2F;span&gt;&lt;span&gt;((*vert).slab_index);
+&lt;&#x2F;span&gt;&lt;span&gt;    }
+&lt;&#x2F;span&gt;&lt;span&gt;}
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;There&#x27;s a couple of awkward things you might notice here. When creating a vert we insert it, but right after we get it out as mut to add its index to itself. This feels a bit icky to me but it&#x27;s the only solution I could think of. Slab doesn&#x27;t allow you to remove objects based on their raw pointer, which is the way I would have preferred. You&#x27;ll also notice inside &lt;code&gt;bm_kill_only_vert&lt;&#x2F;code&gt;, I&#x27;ve had to wrap the dereference in brackets to be able to get &lt;code&gt;slab_index&lt;&#x2F;code&gt; out, this is kind of ugly to me but I think it&#x27;s the only way.&lt;&#x2F;p&gt;
+&lt;p&gt;Before settling on Slab, I did have a look around at some arena allocators. The two I tried out were &lt;a href=&quot;https:&#x2F;&#x2F;crates.io&#x2F;crates&#x2F;typed-arena&quot;&gt;typed-arena&lt;&#x2F;a&gt; and &lt;a href=&quot;https:&#x2F;&#x2F;crates.io&#x2F;crates&#x2F;generational-arena&quot;&gt;generational-arena&lt;&#x2F;a&gt;. Typed-arena seems really cool, apparently very quick allocation, but the killer for me was that it doesn&#x27;t allow the deletion of individual objects. If I understand this correctly, it would mean every mesh being edited would be a very slow memory leak. That might be a bit dramatic, I&#x27;m sure there would be ways of managing this behaviour so it isn&#x27;t a problem.&lt;&#x2F;p&gt;
+&lt;p&gt;Generational-arena seemed a bit more fitting to what I need. It allows the removal of objects and hands out &lt;code&gt;Index&lt;&#x2F;code&gt; objects which gives you a safe way of accessing the data you have inserted (Would also be a solution to my &lt;code&gt;slab_index&lt;&#x2F;code&gt; gripe). &lt;code&gt;Index&lt;&#x2F;code&gt; is quite annoying to work with though, having to have everything return a &lt;code&gt;Result&lt;&#x2F;code&gt; and use &lt;code&gt;arena.get_mut(vert_0)?&lt;&#x2F;code&gt; all the time rather than &lt;code&gt;(*vert_0)&lt;&#x2F;code&gt; would start to frustrate me after a while. If I was making BMesh from scratch, I think it would make sense to use &lt;code&gt;Result&lt;&#x2F;code&gt;&#x27;s, but I know the C++ implementation works, so I might as well take the performance benefit of raw pointers and keep rolling with it.&lt;&#x2F;p&gt;
+&lt;h2 id=&quot;faces-and-loops&quot;&gt;Faces and loops&lt;&#x2F;h2&gt;
+&lt;p&gt;Besides switching to Slab, I have also implemented the create and kill functions for &lt;code&gt;BMFace&lt;&#x2F;code&gt; and &lt;code&gt;BMLoop&lt;&#x2F;code&gt; as well as the &lt;code&gt;disk link&lt;&#x2F;code&gt; creation for &lt;code&gt;BMEdge&lt;&#x2F;code&gt;. I&#x27;m getting into the swing of translating from C++ to Rust now so this didn&#x27;t take too long. It also helps that my Slabs seem similar to memory pools in Blender, so there&#x27;s even less for me to think about.&lt;&#x2F;p&gt;
+&lt;h2 id=&quot;euler-operators&quot;&gt;Euler Operators&lt;&#x2F;h2&gt;
+&lt;p&gt;If you look at the &lt;a href=&quot;https:&#x2F;&#x2F;wiki.blender.org&#x2F;wiki&#x2F;Source&#x2F;Modeling&#x2F;BMesh&#x2F;Design&quot;&gt;BMesh design page&lt;&#x2F;a&gt; it has a list of the Euler operators that the higher level mesh editing functions use to do everything. So far, I&#x27;ve implemented these 6:&lt;&#x2F;p&gt;
+&lt;ul&gt;
+&lt;li&gt;bm_vert_create&#x2F;kill&lt;&#x2F;li&gt;
+&lt;li&gt;bm_edge_create&#x2F;kill&lt;&#x2F;li&gt;
+&lt;li&gt;bm_face_create&#x2F;kill&lt;&#x2F;li&gt;
+&lt;&#x2F;ul&gt;
+&lt;p&gt;There are a few more left to implement that the page lists as&lt;&#x2F;p&gt;
+&lt;ul&gt;
+&lt;li&gt;bmesh_kernel_split_edge_make_vert&#x2F;join_edge_kill_vert&lt;&#x2F;li&gt;
+&lt;li&gt;bmesh_kernel_split_face_make_edge&#x2F;join_face_kill_edge: Split Face, Make Edge and Join Face, Kill Edge&lt;&#x2F;li&gt;
+&lt;li&gt;bmesh_loop_reverse: Reverse the loop of a BMFace. Its own inverse&lt;&#x2F;li&gt;
+&lt;&#x2F;ul&gt;
+&lt;p&gt;Before I jump in and implement these though, I&#x27;d like to bring things back to flat-blend and try to render an mesh made with BMesh. So, I need to have another dive into the Blender source code to try and find where&#x2F;how it turns these BMesh&#x27;s (and n-gons 😬) into something a GPU can consume. &lt;&#x2F;p&gt;
+&lt;hr &#x2F;&gt;
+&lt;p&gt;I listened to this album some time last year, great all round but this track is my favourite off it. Gets bonus points for having a wireframe sphere on the art.
+&lt;iframe style=&quot;border-radius:12px&quot; src=&quot;https:&amp;#x2F;&amp;#x2F;open.spotify.com&amp;#x2F;embed&amp;#x2F;track&amp;#x2F;5XMJHuIuP9L8j2NEiEWRla?utm_source=generator&quot; width=&quot;100%&quot; height=&quot;152&quot; frameBorder=&quot;0&quot; allowfullscreen=&quot;&quot;
+    allow=&quot;autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture&quot; loading=&quot;lazy&quot;&gt;&lt;&#x2F;iframe&gt;&lt;&#x2F;p&gt;
+</content>
+	</entry>
+	<entry xml:lang="en">
+		<title>BMesh in Rust</title>
+		<published>2023-02-05T00:00:00+00:00</published>
+		<updated>2023-02-05T00:00:00+00:00</updated>
+		<link rel="alternate" href="https://zacxalot.github.io/flat-blend/3-bmesh-in-rust/" type="text/html"/>
+		<id>https://zacxalot.github.io/flat-blend/3-bmesh-in-rust/</id>
+		<content type="html">&lt;p&gt;I&#x27;ll start with trying to answer some of the questions I left off with in my last post.&lt;&#x2F;p&gt;
+&lt;ul&gt;
+&lt;li&gt;Do I need to implement this myself or is there a library that will do what I need&lt;&#x2F;li&gt;
+&lt;&#x2F;ul&gt;
+&lt;p&gt;I found a package that might be heading in the right direction for what I need called &lt;a href=&quot;https:&#x2F;&#x2F;crates.io&#x2F;crates&#x2F;hedron&quot;&gt;hedron&lt;&#x2F;a&gt;, but the developer has stated that it&#x27;s in &amp;quot;Pre Alpha&amp;quot; and a lot of the functionality I&#x27;d like to have such as boolean operations and subdivisions are marked as (TODO). Still, a very cool project! Has Bevy integration too!&lt;&#x2F;p&gt;
+&lt;p&gt;There were a few other packages that I found but they were all quite old&#x2F;not flexible enough.&lt;&#x2F;p&gt;
+&lt;hr &#x2F;&gt;
+&lt;ul&gt;
+&lt;li&gt;Is this even what I need, or is it too advanced&#x2F;3D specific&lt;&#x2F;li&gt;
+&lt;&#x2F;ul&gt;
+&lt;p&gt;Code now, ask questions later! I&#x27;m sure that won&#x27;t come back to haunt me 😅&lt;&#x2F;p&gt;
+&lt;p&gt;I don&#x27;t care I&#x27;m having fun.&lt;&#x2F;p&gt;
+&lt;hr &#x2F;&gt;
+&lt;ul&gt;
+&lt;li&gt;How do I implement this in safe Rust, there&#x27;s a lot of pointer usage going on here and I feel there might be some confusing lifetimes going on in there too&lt;&#x2F;li&gt;
+&lt;&#x2F;ul&gt;
+&lt;p&gt;This is where it gets a bit rough. I&#x27;ve been hurting my brain trying to implement just the data structure in safe Rust and I&#x27;ve found it to be extremely difficult, at least when trying to translate from C++. The problem is the one I foresaw, a crazy amount of pointer usage, and those pointers go back and forth too. As you would expect, a &lt;code&gt;BMEdge&lt;&#x2F;code&gt; has a pointer to two vertices. But if vertex hasn&#x27;t got any edges attached to it yet, the vertex gets a pointer to the edge that was just created.&lt;&#x2F;p&gt;
+&lt;p&gt;This bi-directional referencing is used throught the BMesh structure (Diagram from the Blender wiki &lt;a href=&quot;https:&#x2F;&#x2F;wiki.blender.org&#x2F;w&#x2F;images&#x2F;0&#x2F;06&#x2F;Dev-BMesh-Structures.png&quot;&gt;here&lt;&#x2F;a&gt;, bit of a hectic image), I believe it&#x27;s integral for making the data easily traversable. &lt;&#x2F;p&gt;
+&lt;p&gt;I had a look at the source code for &lt;code&gt;LinkedList&lt;&#x2F;code&gt; in the Rust standard library for some potential hints on how to make something like this safe, but &lt;code&gt;LinkedList&lt;&#x2F;code&gt; isn&#x27;t safe either.&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;rust&quot; style=&quot;background-color:#2b303b;color:#c0c5ce;&quot; class=&quot;language-rust &quot;&gt;&lt;code class=&quot;language-rust&quot; data-lang=&quot;rust&quot;&gt;&lt;span style=&quot;color:#65737e;&quot;&gt;&#x2F;&#x2F; linked_list.rs Rust standard library
+&lt;&#x2F;span&gt;&lt;span&gt;
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;pub struct &lt;&#x2F;span&gt;&lt;span&gt;LinkedList&amp;lt;T&amp;gt; {
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;head&lt;&#x2F;span&gt;&lt;span&gt;: Option&amp;lt;NonNull&amp;lt;Node&amp;lt;T&amp;gt;&amp;gt;&amp;gt;,
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;tail&lt;&#x2F;span&gt;&lt;span&gt;: Option&amp;lt;NonNull&amp;lt;Node&amp;lt;T&amp;gt;&amp;gt;&amp;gt;,
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;len&lt;&#x2F;span&gt;&lt;span&gt;: &lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;usize&lt;&#x2F;span&gt;&lt;span&gt;,
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;marker&lt;&#x2F;span&gt;&lt;span&gt;: PhantomData&amp;lt;Box&amp;lt;Node&amp;lt;T&amp;gt;&amp;gt;&amp;gt;,
+&lt;&#x2F;span&gt;&lt;span&gt;}
+&lt;&#x2F;span&gt;&lt;span&gt;
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;struct &lt;&#x2F;span&gt;&lt;span&gt;Node&amp;lt;T&amp;gt; {
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;next&lt;&#x2F;span&gt;&lt;span&gt;: Option&amp;lt;NonNull&amp;lt;Node&amp;lt;T&amp;gt;&amp;gt;&amp;gt;,
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;prev&lt;&#x2F;span&gt;&lt;span&gt;: Option&amp;lt;NonNull&amp;lt;Node&amp;lt;T&amp;gt;&amp;gt;&amp;gt;,
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;element&lt;&#x2F;span&gt;&lt;span&gt;: T,
+&lt;&#x2F;span&gt;&lt;span&gt;}
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;There&#x27;s still a lot that I&#x27;m not sure about here. I think &lt;code&gt;PhantomData&amp;lt;Box&amp;lt;Node&amp;lt;T&amp;gt;&amp;gt;&amp;gt;&lt;&#x2F;code&gt; is there to tell the compiler that the struct owns some values of type &lt;code&gt;T&lt;&#x2F;code&gt;, ever though it doesn&#x27;t really, it just owns some pointers. I&#x27;m not sure on that though, if that is what it&#x27;s doing, I don&#x27;t know why we need to do it. There&#x27;s also the usage of &lt;code&gt;NotNull&lt;&#x2F;code&gt; for the pointers to Node. From what I can tell, it is just a wrapper around this: &lt;code&gt;pointer: *const T&lt;&#x2F;code&gt;, why we need that I have no idea. Both of these are covered by a nifty Rust book &lt;a href=&quot;https:&#x2F;&#x2F;rust-unofficial.github.io&#x2F;too-many-lists&#x2F;sixth-variance.html&quot;&gt;Learning Rust With Entirely Too Many Linked Lists&lt;&#x2F;a&gt;, which I&#x27;ve read a bit of but clearly I have not fully understood (I&#x27;m going to have another go later).&lt;&#x2F;p&gt;
+&lt;h2 id=&quot;implemenatations&quot;&gt;Implemenatations&lt;&#x2F;h2&gt;
+&lt;p&gt;So! Over to my probably poor implementation of something similar. Similar in the sense that it&#x27;s using raw pointers anyway.&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;rust&quot; style=&quot;background-color:#2b303b;color:#c0c5ce;&quot; class=&quot;language-rust &quot;&gt;&lt;code class=&quot;language-rust&quot; data-lang=&quot;rust&quot;&gt;&lt;span style=&quot;color:#65737e;&quot;&gt;&#x2F;&#x2F; bm_vert.rs
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;pub type &lt;&#x2F;span&gt;&lt;span&gt;PBMVert = &lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;*mut &lt;&#x2F;span&gt;&lt;span&gt;ManuallyDrop&amp;lt;BMVert&amp;gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;
+&lt;&#x2F;span&gt;&lt;span&gt;#[&lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;derive&lt;&#x2F;span&gt;&lt;span&gt;(Debug)]
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;pub struct &lt;&#x2F;span&gt;&lt;span&gt;BMVert {
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;pub &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;edge&lt;&#x2F;span&gt;&lt;span&gt;: Option&amp;lt;PBMEdge&amp;gt;,
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;pub &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;vertex&lt;&#x2F;span&gt;&lt;span&gt;: Vertex,
+&lt;&#x2F;span&gt;&lt;span&gt;}
+&lt;&#x2F;span&gt;&lt;span&gt;
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#65737e;&quot;&gt;&#x2F;&#x2F; bm_edge.rs
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;pub type &lt;&#x2F;span&gt;&lt;span&gt;PBMEdge = &lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;*mut &lt;&#x2F;span&gt;&lt;span&gt;ManuallyDrop&amp;lt;BMEdge&amp;gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;pub struct &lt;&#x2F;span&gt;&lt;span&gt;BMEdge {
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;pub &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;v0&lt;&#x2F;span&gt;&lt;span&gt;: PBMVert,
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;pub &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;v1&lt;&#x2F;span&gt;&lt;span&gt;: PBMVert,
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;pub&lt;&#x2F;span&gt;&lt;span&gt; r#&lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;loop&lt;&#x2F;span&gt;&lt;span&gt;: PBMLoop,
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;pub &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;v0_disk_link&lt;&#x2F;span&gt;&lt;span&gt;: BMDiskLink,
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;pub &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;v1_disk_link&lt;&#x2F;span&gt;&lt;span&gt;: BMDiskLink,
+&lt;&#x2F;span&gt;&lt;span&gt;}
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;I&#x27;ve also implemented the vert and edge create Euler operations mentioned in the &lt;a href=&quot;https:&#x2F;&#x2F;wiki.blender.org&#x2F;wiki&#x2F;Source&#x2F;Modeling&#x2F;BMesh&#x2F;Design#Low-level_API&quot;&gt;BMesh design page &lt;&#x2F;a&gt;.&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;rust&quot; style=&quot;background-color:#2b303b;color:#c0c5ce;&quot; class=&quot;language-rust &quot;&gt;&lt;code class=&quot;language-rust&quot; data-lang=&quot;rust&quot;&gt;&lt;span style=&quot;color:#65737e;&quot;&gt;&#x2F;&#x2F; bm_vert.rs
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;pub fn &lt;&#x2F;span&gt;&lt;span style=&quot;color:#8fa1b3;&quot;&gt;bm_vert_create&lt;&#x2F;span&gt;&lt;span&gt;(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;_bmesh&lt;&#x2F;span&gt;&lt;span&gt;: &amp;amp;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;mut&lt;&#x2F;span&gt;&lt;span&gt; BMesh) -&amp;gt; ManuallyDrop&amp;lt;BMVert&amp;gt; {
+&lt;&#x2F;span&gt;&lt;span&gt;    ManuallyDrop::new(BMVert::from((&lt;&#x2F;span&gt;&lt;span style=&quot;color:#d08770;&quot;&gt;0.0&lt;&#x2F;span&gt;&lt;span&gt;, &lt;&#x2F;span&gt;&lt;span style=&quot;color:#d08770;&quot;&gt;0.0&lt;&#x2F;span&gt;&lt;span&gt;)))
+&lt;&#x2F;span&gt;&lt;span&gt;}
+&lt;&#x2F;span&gt;&lt;span&gt;
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#65737e;&quot;&gt;&#x2F;&#x2F; bm_edge.rs
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;pub fn &lt;&#x2F;span&gt;&lt;span style=&quot;color:#8fa1b3;&quot;&gt;bm_edge_create&lt;&#x2F;span&gt;&lt;span&gt;(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;_bmesh&lt;&#x2F;span&gt;&lt;span&gt;: &amp;amp;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;mut&lt;&#x2F;span&gt;&lt;span&gt; BMesh, &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;v0&lt;&#x2F;span&gt;&lt;span&gt;: PBMVert, &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;v1&lt;&#x2F;span&gt;&lt;span&gt;: PBMVert) -&amp;gt; ManuallyDrop&amp;lt;BMEdge&amp;gt; {
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;let mut&lt;&#x2F;span&gt;&lt;span&gt; e = ManuallyDrop::new(BMEdge {
+&lt;&#x2F;span&gt;&lt;span&gt;        v0,
+&lt;&#x2F;span&gt;&lt;span&gt;        v1,
+&lt;&#x2F;span&gt;&lt;span&gt;        r#&lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;loop&lt;&#x2F;span&gt;&lt;span&gt;: &lt;&#x2F;span&gt;&lt;span style=&quot;color:#96b5b4;&quot;&gt;null_mut&lt;&#x2F;span&gt;&lt;span&gt;(),
+&lt;&#x2F;span&gt;&lt;span&gt;        v0_disk_link: BMDiskLink::new(),
+&lt;&#x2F;span&gt;&lt;span&gt;        v1_disk_link: BMDiskLink::new(),
+&lt;&#x2F;span&gt;&lt;span&gt;    });
+&lt;&#x2F;span&gt;&lt;span&gt;
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#96b5b4;&quot;&gt;bmesh_disk_edge_append&lt;&#x2F;span&gt;&lt;span&gt;(&amp;amp;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;mut&lt;&#x2F;span&gt;&lt;span&gt; e, v0);
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#96b5b4;&quot;&gt;bmesh_disk_edge_append&lt;&#x2F;span&gt;&lt;span&gt;(&amp;amp;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;mut&lt;&#x2F;span&gt;&lt;span&gt; e, v1);
+&lt;&#x2F;span&gt;&lt;span&gt;
+&lt;&#x2F;span&gt;&lt;span&gt;    e
+&lt;&#x2F;span&gt;&lt;span&gt;}
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;Comparing the two, there are a few things I&#x27;m doing differently and probably completely wrong. I&#x27;m using &lt;code&gt;ManuallyDrop&lt;&#x2F;code&gt; everywhere, this is because the BMesh struct we make doesn&#x27;t actually own any of the Vertices, Edges, Faces... that it is made up of. So if we didn&#x27;t stop it from dropping the values we create, we could get into a situation where we have dangling pointers. At least I think that&#x27;s what I&#x27;m doing by wrapping everything in &lt;code&gt;ManuallyDrop&lt;&#x2F;code&gt;.&lt;&#x2F;p&gt;
+&lt;p&gt;I implemented Drop on &lt;code&gt;BMVert&lt;&#x2F;code&gt; to see when its drop was being called and it stopped calling that as soon as I wrapped it in &lt;code&gt;ManuallyDrop&lt;&#x2F;code&gt; so I just went with it. Without it, the dangling pointers still pointed to the right data, but I think this data no longer had the guaratee of being what we expect it to be. Scary stuff!&lt;&#x2F;p&gt;
+&lt;p&gt;So, I think this &lt;code&gt;ManuallyDrop&lt;&#x2F;code&gt; stuff is fine, but maybe not the best solution for this problem. It might be solved by using &lt;code&gt;PhantomData&amp;lt;Box&amp;lt;Node&amp;lt;T&amp;gt;&amp;gt;&amp;gt;&lt;&#x2F;code&gt;. Or maybe I do need it, I don&#x27;t know. The Blender code uses &lt;code&gt;mempool&lt;&#x2F;code&gt;&#x27;s which look complicated too.&lt;&#x2F;p&gt;
+&lt;p&gt;Another thing I&#x27;m doing differently is I&#x27;m using &lt;code&gt;*mut&lt;&#x2F;code&gt; rather than &lt;code&gt;NonNull&lt;&#x2F;code&gt;. Only because I don&#x27;t know how &lt;code&gt;NonNull&lt;&#x2F;code&gt; works or why it&#x27;s useful yet.&lt;&#x2F;p&gt;
+&lt;p&gt;Finally, I noticed that I&#x27;m not using Box anywhere, so I am guessing everything I&#x27;ve been making so far has been going on the stack. &lt;&#x2F;p&gt;
+&lt;h2 id=&quot;difficult-but-fun&quot;&gt;Difficult but fun&lt;&#x2F;h2&gt;
+&lt;p&gt;I really enjoy working with Rust and this is a side of it that I&#x27;ve never needed to touch on before. Knowing that standard library stuff is also unsafe makes me feel less nauseous about using it but I&#x27;m still well aware that there&#x27;s a lot of pitfalls for me to jump into. I&#x27;ve got a lot left to learn but I&#x27;m getting there. I&#x27;m going to go and read some stuff and probably rewrite everything.&lt;&#x2F;p&gt;
+&lt;p&gt;Thanks for reading!&lt;&#x2F;p&gt;
+&lt;hr &#x2F;&gt;
+&lt;p&gt;I&#x27;m a bit too young to have experienced the music of the 90&#x27;s, and I&#x27;m kind of glad because most of it sounds terrible compared to its bookending decades.
+There&#x27;s some alright stuff in there though, I just found &lt;code&gt;Come on over Baby (All I Want Is You) by Christina Aguilera&lt;&#x2F;code&gt;.
+Give this a listen it&#x27;s pretty sweet.&lt;&#x2F;p&gt;
+&lt;iframe style=&quot;border-radius:12px&quot; src=&quot;https:&amp;#x2F;&amp;#x2F;open.spotify.com&amp;#x2F;embed&amp;#x2F;track&amp;#x2F;4L8AtXJFgtX5E3Hr172uIg?utm_source=generator&amp;amp;theme=0&quot; width=&quot;100%&quot; height=&quot;152&quot; frameBorder=&quot;0&quot; allowfullscreen=&quot;&quot;
+    allow=&quot;autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture&quot; loading=&quot;lazy&quot;&gt;&lt;&#x2F;iframe&gt;
+&lt;p&gt;I tried embedding the proper album version, but Spotify&#x27;s embed functionality links you to the wrong song if it&#x27;s a multi disker apparently 🙄.&lt;&#x2F;p&gt;
+</content>
+	</entry>
+	<entry xml:lang="en">
+		<title>Mesh Data Structures?</title>
+		<published>2023-01-29T00:00:00+00:00</published>
+		<updated>2023-01-29T00:00:00+00:00</updated>
+		<link rel="alternate" href="https://zacxalot.github.io/flat-blend/2-data-structures/" type="text/html"/>
+		<id>https://zacxalot.github.io/flat-blend/2-data-structures/</id>
+		<content type="html">&lt;p&gt;At the moment, we&#x27;re generating vertices using the &lt;a href=&quot;https:&#x2F;&#x2F;lib.rs&#x2F;crates&#x2F;lyon&quot;&gt;Lyon&lt;&#x2F;a&gt; crate and sticking them right into a vertex buffer for Vulkan to use.&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;rust&quot; style=&quot;background-color:#2b303b;color:#c0c5ce;&quot; class=&quot;language-rust &quot;&gt;&lt;code class=&quot;language-rust&quot; data-lang=&quot;rust&quot;&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;let mut&lt;&#x2F;span&gt;&lt;span&gt; geometry: VertexBuffers&amp;lt;Point, &lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;u16&lt;&#x2F;span&gt;&lt;span&gt;&amp;gt; = VertexBuffers::new();
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;let mut&lt;&#x2F;span&gt;&lt;span&gt; geometry_builder = &lt;&#x2F;span&gt;&lt;span style=&quot;color:#96b5b4;&quot;&gt;simple_builder&lt;&#x2F;span&gt;&lt;span&gt;(&amp;amp;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;mut&lt;&#x2F;span&gt;&lt;span&gt; geometry);
+&lt;&#x2F;span&gt;&lt;span&gt;
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;let&lt;&#x2F;span&gt;&lt;span&gt; options = FillOptions::tolerance(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#d08770;&quot;&gt;0.001&lt;&#x2F;span&gt;&lt;span&gt;);
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;let mut&lt;&#x2F;span&gt;&lt;span&gt; tessellator = FillTessellator::new();
+&lt;&#x2F;span&gt;&lt;span&gt;
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;let mut&lt;&#x2F;span&gt;&lt;span&gt; builder = tessellator.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#96b5b4;&quot;&gt;builder&lt;&#x2F;span&gt;&lt;span&gt;(&amp;amp;options, &amp;amp;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;mut&lt;&#x2F;span&gt;&lt;span&gt; geometry_builder);
+&lt;&#x2F;span&gt;&lt;span&gt;
+&lt;&#x2F;span&gt;&lt;span&gt;builder.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#96b5b4;&quot;&gt;add_circle&lt;&#x2F;span&gt;&lt;span&gt;([&lt;&#x2F;span&gt;&lt;span style=&quot;color:#d08770;&quot;&gt;0.0&lt;&#x2F;span&gt;&lt;span&gt;, &lt;&#x2F;span&gt;&lt;span style=&quot;color:#d08770;&quot;&gt;0.0&lt;&#x2F;span&gt;&lt;span&gt;].&lt;&#x2F;span&gt;&lt;span style=&quot;color:#96b5b4;&quot;&gt;into&lt;&#x2F;span&gt;&lt;span&gt;(), &lt;&#x2F;span&gt;&lt;span style=&quot;color:#d08770;&quot;&gt;1.0&lt;&#x2F;span&gt;&lt;span&gt;, Winding::Positive);
+&lt;&#x2F;span&gt;&lt;span&gt;
+&lt;&#x2F;span&gt;&lt;span&gt;builder.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#96b5b4;&quot;&gt;build&lt;&#x2F;span&gt;&lt;span&gt;().&lt;&#x2F;span&gt;&lt;span style=&quot;color:#96b5b4;&quot;&gt;unwrap&lt;&#x2F;span&gt;&lt;span&gt;();
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;The geometry generation is fine, I plan to use Lyon for this purpose for as long as I can. I&#x27;m still thinking about it, but I think my problem is how do I store this data for several meshes and how do I edit the vertex data while still keeping track of where faces are.&lt;&#x2F;p&gt;
+&lt;p&gt;In seek of answers, I turned to the Blender development wiki and found &lt;a href=&quot;https:&#x2F;&#x2F;wiki.blender.org&#x2F;wiki&#x2F;Source&#x2F;Objects&#x2F;Mesh&quot;&gt;this page&lt;&#x2F;a&gt;, which reveals that Blender uses to methods of structuring mesh data. &lt;code&gt;Mesh&lt;&#x2F;code&gt;, which is how meshes are stored when they&#x27;re not being modified, and &lt;code&gt;BMesh&lt;&#x2F;code&gt; which is how they&#x27;re stored when they are being modified. I&#x27;m not sure if either of these are relevant for what I&#x27;m trying to achieve, or if I need a similarly separated system for static and editable mesh data, so I&#x27;m going to look into both and see.&lt;&#x2F;p&gt;
+&lt;h3 id=&quot;a-few-hours-maybe-a-day-later&quot;&gt;A few hours (maybe a day) later...&lt;&#x2F;h3&gt;
+&lt;p&gt;This is a few hours later and I&#x27;m getting there. I&#x27;ve downloaded the source code for Blender and found that there&#x27;s some wonderful documentation in there that you have to generate with doxygen. Using the docs, I managed to find this:&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;cpp&quot; style=&quot;background-color:#2b303b;color:#c0c5ce;&quot; class=&quot;language-cpp &quot;&gt;&lt;code class=&quot;language-cpp&quot; data-lang=&quot;cpp&quot;&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;typedef struct&lt;&#x2F;span&gt;&lt;span&gt; Mesh {
+&lt;&#x2F;span&gt;&lt;span&gt;  &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;DNA_DEFINE_CXX_METHODS&lt;&#x2F;span&gt;&lt;span&gt;(Mesh)
+&lt;&#x2F;span&gt;&lt;span&gt; 
+&lt;&#x2F;span&gt;&lt;span&gt;  ID id;
+&lt;&#x2F;span&gt;&lt;span&gt;  &lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;struct&lt;&#x2F;span&gt;&lt;span&gt; AnimData *adt;
+&lt;&#x2F;span&gt;&lt;span&gt; 
+&lt;&#x2F;span&gt;&lt;span&gt;  &lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;struct&lt;&#x2F;span&gt;&lt;span&gt; Ipo *ipo DNA_DEPRECATED;
+&lt;&#x2F;span&gt;&lt;span&gt;  &lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;struct&lt;&#x2F;span&gt;&lt;span&gt; Key *key;
+&lt;&#x2F;span&gt;&lt;span&gt; 
+&lt;&#x2F;span&gt;&lt;span&gt;  &lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;struct&lt;&#x2F;span&gt;&lt;span&gt; Material **mat;
+&lt;&#x2F;span&gt;&lt;span&gt; 
+&lt;&#x2F;span&gt;&lt;span&gt;  &lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;int&lt;&#x2F;span&gt;&lt;span&gt; totvert;
+&lt;&#x2F;span&gt;&lt;span&gt;  &lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;int&lt;&#x2F;span&gt;&lt;span&gt; totedge;
+&lt;&#x2F;span&gt;&lt;span&gt;  &lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;int&lt;&#x2F;span&gt;&lt;span&gt; totpoly;
+&lt;&#x2F;span&gt;&lt;span&gt;  &lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;int&lt;&#x2F;span&gt;&lt;span&gt; totloop;
+&lt;&#x2F;span&gt;&lt;span&gt; 
+&lt;&#x2F;span&gt;&lt;span&gt;  CustomData vdata, edata, pdata, ldata;
+&lt;&#x2F;span&gt;&lt;span&gt;  ...
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;DNA_mesh_types.h&lt;&#x2F;p&gt;
+&lt;p&gt;This is the start of the struct definition for &lt;code&gt;Mesh&lt;&#x2F;code&gt; (there&#x27;s quite a bit more but I can barely understand it, a lot of it says it is deprecated anyway). So, I think the data of vertex positions, edges and such are stored in the *data properties at the bottom there. They all exist as &lt;code&gt;CustomData&lt;&#x2F;code&gt;. I&#x27;ve had a look in the files for &lt;code&gt;CustomData&lt;&#x2F;code&gt; and I can&#x27;t for the life of me figure out how it works, it seems to be doing memory management stuff, but I don&#x27;t know C++ too well. If I were to guess, I&#x27;d say &lt;code&gt;vdata&lt;&#x2F;code&gt; stores vertices, &lt;code&gt;e&lt;&#x2F;code&gt; stores edges, &lt;code&gt;p&lt;&#x2F;code&gt; stores polygons and &lt;code&gt;l&lt;&#x2F;code&gt; stores loops.&lt;&#x2F;p&gt;
+&lt;p&gt;I also found the documentation and code for &lt;code&gt;BMesh&lt;&#x2F;code&gt;. There&#x27;s a lot going on in here that I don&#x27;t understand too, &lt;code&gt;BMesh&lt;&#x2F;code&gt; seems to store the same &lt;code&gt;CustomData&lt;&#x2F;code&gt; as &lt;code&gt;Mesh&lt;&#x2F;code&gt; but it also has &lt;code&gt;BMVert&lt;&#x2F;code&gt;, &lt;code&gt;BMEdge&lt;&#x2F;code&gt;, &lt;code&gt;BMFace&lt;&#x2F;code&gt; and &lt;code&gt;BMLoop&lt;&#x2F;code&gt;. The documentation explains that faces are made up of &amp;quot;a circular linked list of loops&amp;quot; so I went and found the definition of &lt;code&gt;BMLoop&lt;&#x2F;code&gt; (and trimmed out the documentation for easier reading).&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;cpp&quot; style=&quot;background-color:#2b303b;color:#c0c5ce;&quot; class=&quot;language-cpp &quot;&gt;&lt;code class=&quot;language-cpp&quot; data-lang=&quot;cpp&quot;&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;typedef struct&lt;&#x2F;span&gt;&lt;span&gt; BMLoop {
+&lt;&#x2F;span&gt;&lt;span&gt;  BMHeader head;
+&lt;&#x2F;span&gt;&lt;span&gt;  &lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;struct&lt;&#x2F;span&gt;&lt;span&gt; BMVert *v;
+&lt;&#x2F;span&gt;&lt;span&gt;  &lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;struct&lt;&#x2F;span&gt;&lt;span&gt; BMEdge *e;
+&lt;&#x2F;span&gt;&lt;span&gt;  &lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;struct&lt;&#x2F;span&gt;&lt;span&gt; BMFace *f;
+&lt;&#x2F;span&gt;&lt;span&gt;  &lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;struct&lt;&#x2F;span&gt;&lt;span&gt; BMLoop *radial_next, *radial_prev;
+&lt;&#x2F;span&gt;&lt;span&gt;  &lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;struct&lt;&#x2F;span&gt;&lt;span&gt; BMLoop *next, *prev;
+&lt;&#x2F;span&gt;&lt;span&gt;} BMLoop;
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;bmesh_class.h&lt;&#x2F;p&gt;
+&lt;p&gt;So &lt;code&gt;BMLoop&lt;&#x2F;code&gt; stores several pointers. A pointer to an edge, which exists as part of the face it is making up. A pointer to a vertex, which must be one of the two vertices that make up the edge it references. A pointer to the face that it is a part of. Pointers forwards and backwards in the circle to other loops that make up the face (next &amp;amp; prev). And finally pointers forwards and backwards in the circle that use the same edge. The edge sharing pointers are interesting, feels like it&#x27;s less obvious why they might be useful compared to the other properties but I&#x27;m sure there necessary somewhere.&lt;&#x2F;p&gt;
+&lt;p&gt;Looking at the other struct definitions, there&#x27;s quite a bit of back and forth referencing going on. For example, &lt;code&gt;BMEdge&lt;&#x2F;code&gt; has pointers to two &lt;code&gt;BMVert&lt;&#x2F;code&gt; pointers (v1 &amp;amp; v2), but it also has a &lt;code&gt;BMLoop&lt;&#x2F;code&gt; pointer. &lt;code&gt;BMVert&lt;&#x2F;code&gt; has a similar thing going on with a pointer &lt;code&gt;BMEdge&lt;&#x2F;code&gt;. &lt;&#x2F;p&gt;
+&lt;p&gt;There&#x27;s another thing I&#x27;ve missed which is that in a &lt;code&gt;BMEdge&lt;&#x2F;code&gt;, there&#x27;s two &lt;code&gt;BMDiskLink&lt;&#x2F;code&gt;&#x27;s, one for each vertex. This keeps a linked list of edges around a vertex.&lt;&#x2F;p&gt;
+&lt;p&gt;If you are interested in taking a look at the BMesh docs yourself , there&#x27;s &lt;a href=&quot;https:&#x2F;&#x2F;wiki.blender.org&#x2F;wiki&#x2F;Source&#x2F;Modeling&#x2F;BMesh&#x2F;Design&quot;&gt;this page&lt;&#x2F;a&gt; on the wiki which is pretty handy, although quite confusing when not accompanied by the doxygen docs, which can be generated by running &lt;code&gt;doxygen&lt;&#x2F;code&gt; in &lt;code&gt;\doc\doxygen&lt;&#x2F;code&gt; in the &lt;a href=&quot;https:&#x2F;&#x2F;github.com&#x2F;blender&#x2F;blender&quot;&gt;Blender source&lt;&#x2F;a&gt;. Also, I may have made some false assumptions throughout this because it&#x27;s quite complicated, if you have any corrections I would love to hear them.&lt;&#x2F;p&gt;
+&lt;h2 id=&quot;what-next&quot;&gt;What next?&lt;&#x2F;h2&gt;
+&lt;p&gt;There are a few things to think about now:&lt;&#x2F;p&gt;
+&lt;ul&gt;
+&lt;li&gt;Do I need to implement this myself or is there a library that will do what I need&lt;&#x2F;li&gt;
+&lt;li&gt;Is this even what I need, or is it too advanced&#x2F;3D specific&lt;&#x2F;li&gt;
+&lt;li&gt;How do I implement this in safe Rust, there&#x27;s a lot of pointer usage going on here and I feel there might be some confusing lifetimes going on in there too&lt;&#x2F;li&gt;
+&lt;li&gt;If I do figure out how to implement the structs in Rust, what operations do I need to implement and how complicated are they?&lt;&#x2F;li&gt;
+&lt;&#x2F;ul&gt;
+&lt;p&gt;I may have not got very far with this here but it was fun having a look around the source, even if I can&#x27;t understand all that much.&lt;&#x2F;p&gt;
+</content>
+	</entry>
+</feed>

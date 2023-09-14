@@ -1,0 +1,396 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom" xml:lang="en">
+	<title> - vulkan</title>
+	<link href="https://zacxalot.github.io/tags/vulkan/atom.xml" rel="self" type="application/atom+xml"/>
+  <link href="https://zacxalot.github.io"/>
+	<generator uri="https://www.getzola.org/">Zola</generator>
+	<updated>2023-03-16T00:00:00+00:00</updated>
+	<id>https://zacxalot.github.io/tags/vulkan/atom.xml</id>
+	<entry xml:lang="en">
+		<title>⌗⌗⌗⌗⌗⌗⌗⌗ Grids ⌗⌗⌗⌗⌗⌗⌗⌗</title>
+		<published>2023-03-16T00:00:00+00:00</published>
+		<updated>2023-03-16T00:00:00+00:00</updated>
+		<link rel="alternate" href="https://zacxalot.github.io/flat-blend/8-grids/" type="text/html"/>
+		<id>https://zacxalot.github.io/flat-blend/8-grids/</id>
+		<content type="html">&lt;p&gt;Blender has a grid, I want a grid!
+Blender&#x27;s grid shader is defined in &lt;code&gt;overlay_grid_frag.glsl&lt;&#x2F;code&gt;.
+Whoever made this shader kindly left an explanation of what the code is achieving and a little bit about how it does it at the top, as well as a link to a chapter in &lt;a href=&quot;https:&#x2F;&#x2F;developer.nvidia.com&#x2F;gpugems&#x2F;gpugems2&#x2F;part-iii-high-quality-rendering&#x2F;chapter-22-fast-prefiltered-lines&quot;&gt;Nvidia&#x27;s GPU Gems 2&lt;&#x2F;a&gt; showing a different way to make pre-filtered lines. I had a read of both of these, as well as the shader code, and I was completely stumped!&lt;&#x2F;p&gt;
+&lt;p&gt;So I decided to have a go of implementing it myself from scratch. Before messing about trying to add a new pipeline to the flat-blend code, I downloaded &lt;a href=&quot;https:&#x2F;&#x2F;shadered.org&#x2F;&quot;&gt;SHADERed&lt;&#x2F;a&gt; to let me iterate on my code quicker. SHADERed is like the desktop version of &lt;a href=&quot;https:&#x2F;&#x2F;www.shadertoy.com&#x2F;&quot;&gt;Shadertoy&lt;&#x2F;a&gt;. I really don&#x27;t like the code editor (weird auto brackets, no comment line shortcut and other annoyances), but the rest is extremely useful for trying different things out. There is a VSCode extension for it but that was annoying in a different way 🙃. &lt;&#x2F;p&gt;
+&lt;p&gt;The first part I got working was the large grid squares. I wrote this code to get whether a pixel was part of a grid or not. &lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;glsl&quot; style=&quot;background-color:#2b303b;color:#c0c5ce;&quot; class=&quot;language-glsl &quot;&gt;&lt;code class=&quot;language-glsl&quot; data-lang=&quot;glsl&quot;&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;float &lt;&#x2F;span&gt;&lt;span style=&quot;color:#8fa1b3;&quot;&gt;getGrid&lt;&#x2F;span&gt;&lt;span&gt;(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;vec2 &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;uv&lt;&#x2F;span&gt;&lt;span&gt;,&lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;int &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;size&lt;&#x2F;span&gt;&lt;span&gt;) {
+&lt;&#x2F;span&gt;&lt;span&gt;	&lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;vec2&lt;&#x2F;span&gt;&lt;span&gt; grid = &lt;&#x2F;span&gt;&lt;span style=&quot;color:#96b5b4;&quot;&gt;mod&lt;&#x2F;span&gt;&lt;span&gt;((uv - (uResolution &#x2F; &lt;&#x2F;span&gt;&lt;span style=&quot;color:#d08770;&quot;&gt;2&lt;&#x2F;span&gt;&lt;span&gt;)) - &lt;&#x2F;span&gt;&lt;span style=&quot;color:#d08770;&quot;&gt;0.5&lt;&#x2F;span&gt;&lt;span&gt;,size);
+&lt;&#x2F;span&gt;&lt;span&gt;	&lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;return &lt;&#x2F;span&gt;&lt;span style=&quot;color:#d08770;&quot;&gt;1.0 &lt;&#x2F;span&gt;&lt;span&gt;- (&lt;&#x2F;span&gt;&lt;span style=&quot;color:#96b5b4;&quot;&gt;clamp&lt;&#x2F;span&gt;&lt;span&gt;(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#96b5b4;&quot;&gt;min&lt;&#x2F;span&gt;&lt;span&gt;(grid.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;x&lt;&#x2F;span&gt;&lt;span&gt;, grid.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;y&lt;&#x2F;span&gt;&lt;span&gt;), &lt;&#x2F;span&gt;&lt;span style=&quot;color:#d08770;&quot;&gt;1.0&lt;&#x2F;span&gt;&lt;span&gt;, &lt;&#x2F;span&gt;&lt;span style=&quot;color:#d08770;&quot;&gt;2.0&lt;&#x2F;span&gt;&lt;span&gt;) - &lt;&#x2F;span&gt;&lt;span style=&quot;color:#d08770;&quot;&gt;1.0&lt;&#x2F;span&gt;&lt;span&gt;);
+&lt;&#x2F;span&gt;&lt;span&gt;}
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;I&#x27;m not too proud of it as it seems a bit overcomplicated, but I&#x27;m new to writing shaders so it&#x27;ll probably one I come back to in the future. I&#x27;ll try and break it down though.&lt;&#x2F;p&gt;
+&lt;p&gt;&lt;code&gt;(uv - (uResolution &#x2F; 2)) - 0.5&lt;&#x2F;code&gt; gives us the coordinates of each pixel relative to the centre of the screen which, when projected onto the red and green output channels, looks like this:
+
+&lt;figure&gt;
+    &lt;img alt=&quot;A viewport divided into four sections, green, yellow, black and red&quot; src=&quot;.&amp;#x2F;centre.png&quot; width=&quot;100%&quot; style=&quot;&quot; &#x2F;&gt;
+    &lt;figcaption&gt;&lt;&#x2F;figcaption&gt;
+&lt;&#x2F;figure&gt;&lt;&#x2F;p&gt;
+&lt;p&gt;Then we get the mod of this like so &lt;code&gt;mod((uv - (uResolution &#x2F; 2)) - 0.5,size)&lt;&#x2F;code&gt;, which does a kind of sawtooth pass over our input, splitting it into squares of &lt;code&gt;size&lt;&#x2F;code&gt; width and height, which results in this:
+
+&lt;figure&gt;
+    &lt;img alt=&quot;A viewport divided into yellow squares&quot; src=&quot;.&amp;#x2F;big_grid.png&quot; width=&quot;100%&quot; style=&quot;&quot; &#x2F;&gt;
+    &lt;figcaption&gt;&lt;&#x2F;figcaption&gt;
+&lt;&#x2F;figure&gt;&lt;&#x2F;p&gt;
+&lt;p&gt;You can see from this there are red lines going across the screen and green lines going up. To extract the grid from this we run this &lt;code&gt;1.0 - (clamp(min(grid.x, grid.y), 1.0, 2.0) - 1.0)&lt;&#x2F;code&gt; over it. First we get the &lt;code&gt;min(grid., grid.y)&lt;&#x2F;code&gt; which is where there is only red or only green (all of the yellow is where there is both), then clamp it between &lt;code&gt;1.0&lt;&#x2F;code&gt; and &lt;code&gt;2.0&lt;&#x2F;code&gt;. We then subtract &lt;code&gt;1.0&lt;&#x2F;code&gt; from this to make the actual range of values be between &lt;code&gt;0.0&lt;&#x2F;code&gt; and &lt;code&gt;1.0&lt;&#x2F;code&gt; (This seems a bit convoluted but looked better than other things I tried). Finally, we do &lt;code&gt;1.0 - black_grid&lt;&#x2F;code&gt; to get a white grid with a black background:
+
+&lt;figure&gt;
+    &lt;img alt=&quot;A white grid on a black background&quot; src=&quot;.&amp;#x2F;big.png&quot; width=&quot;100%&quot; style=&quot;&quot; &#x2F;&gt;
+    &lt;figcaption&gt;&lt;&#x2F;figcaption&gt;
+&lt;&#x2F;figure&gt;&lt;&#x2F;p&gt;
+&lt;p&gt;I then run this same function with a size parameter half that of the larger grid to get a grid with squares half of the size. These are then combined like so &lt;code&gt;vec3 grid = vec3(max(big &#x2F; 2, small &#x2F; 8))&lt;&#x2F;code&gt; to produce this:
+
+&lt;figure&gt;
+    &lt;img alt=&quot;A white grid with smaller less bold squares on a black background&quot; src=&quot;.&amp;#x2F;big_and_small.png&quot; width=&quot;100%&quot; style=&quot;&quot; &#x2F;&gt;
+    &lt;figcaption&gt;&lt;&#x2F;figcaption&gt;
+&lt;&#x2F;figure&gt;&lt;&#x2F;p&gt;
+&lt;p&gt;Now it&#x27;s time for the axis! This is where I got stuck trying to re-use my &lt;code&gt;getGrid&lt;&#x2F;code&gt; function in a similar way to how Blender does it, but my implementation was too different, so I ended up making a new &lt;code&gt;getAxis&lt;&#x2F;code&gt; method.&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;glsl&quot; style=&quot;background-color:#2b303b;color:#c0c5ce;&quot; class=&quot;language-glsl &quot;&gt;&lt;code class=&quot;language-glsl&quot; data-lang=&quot;glsl&quot;&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;float &lt;&#x2F;span&gt;&lt;span style=&quot;color:#8fa1b3;&quot;&gt;getAxis&lt;&#x2F;span&gt;&lt;span&gt;(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;vec2 &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;uv&lt;&#x2F;span&gt;&lt;span&gt;, &lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;int &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;axis&lt;&#x2F;span&gt;&lt;span&gt;) {
+&lt;&#x2F;span&gt;&lt;span&gt;	&lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;float&lt;&#x2F;span&gt;&lt;span&gt; line = &lt;&#x2F;span&gt;&lt;span style=&quot;color:#96b5b4;&quot;&gt;abs&lt;&#x2F;span&gt;&lt;span&gt;(((uv[axis] + &lt;&#x2F;span&gt;&lt;span style=&quot;color:#d08770;&quot;&gt;0.5&lt;&#x2F;span&gt;&lt;span&gt;) - (uResolution[axis]&#x2F;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#d08770;&quot;&gt;2&lt;&#x2F;span&gt;&lt;span&gt;))&#x2F;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#d08770;&quot;&gt;5&lt;&#x2F;span&gt;&lt;span&gt;);
+&lt;&#x2F;span&gt;&lt;span&gt;	&lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;return &lt;&#x2F;span&gt;&lt;span style=&quot;color:#96b5b4;&quot;&gt;clamp&lt;&#x2F;span&gt;&lt;span&gt;(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#d08770;&quot;&gt;1.0 &lt;&#x2F;span&gt;&lt;span&gt;- line, &lt;&#x2F;span&gt;&lt;span style=&quot;color:#d08770;&quot;&gt;0.0&lt;&#x2F;span&gt;&lt;span&gt;, &lt;&#x2F;span&gt;&lt;span style=&quot;color:#d08770;&quot;&gt;1.0&lt;&#x2F;span&gt;&lt;span&gt;);
+&lt;&#x2F;span&gt;&lt;span&gt;}
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;This operates on a similar principal to the get grid but operates on only one axis at a time, and instead of performing a &lt;code&gt;mod&lt;&#x2F;code&gt;, the output is divided and &lt;code&gt;abs&lt;&#x2F;code&gt;&#x27;ed to give a gradient along the axis like this:
+
+&lt;figure&gt;
+    &lt;img alt=&quot;A white line along the y axis&quot; src=&quot;.&amp;#x2F;y_axis.png&quot; width=&quot;100%&quot; style=&quot;&quot; &#x2F;&gt;
+    &lt;figcaption&gt;&lt;&#x2F;figcaption&gt;
+&lt;&#x2F;figure&gt;&lt;&#x2F;p&gt;
+&lt;p&gt;If we run this for the other axis, and assign each to their respective colour channels like so &lt;code&gt;vec3 axis = vec3(xAxis, yAxis, 0.0);&lt;&#x2F;code&gt;, we get our axis!
+
+&lt;figure&gt;
+    &lt;img alt=&quot;Red and green x and y axis&quot; src=&quot;.&amp;#x2F;axis.png&quot; width=&quot;100%&quot; style=&quot;&quot; &#x2F;&gt;
+    &lt;figcaption&gt;&lt;&#x2F;figcaption&gt;
+&lt;&#x2F;figure&gt;&lt;&#x2F;p&gt;
+&lt;p&gt;Then, all we do is combine that with the grid we had from before to get out final output 🥳
+
+&lt;figure&gt;
+    &lt;img alt=&quot;A grid with all previously described elements on it&quot; src=&quot;.&amp;#x2F;complete_grid.png&quot; width=&quot;100%&quot; style=&quot;&quot; &#x2F;&gt;
+    &lt;figcaption&gt;&lt;&#x2F;figcaption&gt;
+&lt;&#x2F;figure&gt;&lt;&#x2F;p&gt;
+&lt;p&gt;Here is the final fragment shader&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;glsl&quot; style=&quot;background-color:#2b303b;color:#c0c5ce;&quot; class=&quot;language-glsl &quot;&gt;&lt;code class=&quot;language-glsl&quot; data-lang=&quot;glsl&quot;&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;#version&lt;&#x2F;span&gt;&lt;span&gt; 330
+&lt;&#x2F;span&gt;&lt;span&gt;
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;uniform vec2&lt;&#x2F;span&gt;&lt;span&gt; uResolution;
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;out vec4&lt;&#x2F;span&gt;&lt;span&gt; outColor;
+&lt;&#x2F;span&gt;&lt;span&gt;
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;int&lt;&#x2F;span&gt;&lt;span&gt; squareSize = &lt;&#x2F;span&gt;&lt;span style=&quot;color:#d08770;&quot;&gt;160&lt;&#x2F;span&gt;&lt;span&gt;;
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;int&lt;&#x2F;span&gt;&lt;span&gt; smallSquareSize = squareSize &#x2F; &lt;&#x2F;span&gt;&lt;span style=&quot;color:#d08770;&quot;&gt;2&lt;&#x2F;span&gt;&lt;span&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;float &lt;&#x2F;span&gt;&lt;span style=&quot;color:#8fa1b3;&quot;&gt;getGrid&lt;&#x2F;span&gt;&lt;span&gt;(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;vec2 &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;uv&lt;&#x2F;span&gt;&lt;span&gt;,&lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;int &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;size&lt;&#x2F;span&gt;&lt;span&gt;) {
+&lt;&#x2F;span&gt;&lt;span&gt;	&lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;vec2&lt;&#x2F;span&gt;&lt;span&gt; grid = &lt;&#x2F;span&gt;&lt;span style=&quot;color:#96b5b4;&quot;&gt;mod&lt;&#x2F;span&gt;&lt;span&gt;((uv - (uResolution &#x2F; &lt;&#x2F;span&gt;&lt;span style=&quot;color:#d08770;&quot;&gt;2&lt;&#x2F;span&gt;&lt;span&gt;)) - &lt;&#x2F;span&gt;&lt;span style=&quot;color:#d08770;&quot;&gt;0.5&lt;&#x2F;span&gt;&lt;span&gt;,size);
+&lt;&#x2F;span&gt;&lt;span&gt;	&lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;return &lt;&#x2F;span&gt;&lt;span style=&quot;color:#d08770;&quot;&gt;1.0 &lt;&#x2F;span&gt;&lt;span&gt;- (&lt;&#x2F;span&gt;&lt;span style=&quot;color:#96b5b4;&quot;&gt;clamp&lt;&#x2F;span&gt;&lt;span&gt;(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#96b5b4;&quot;&gt;min&lt;&#x2F;span&gt;&lt;span&gt;(grid.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;x&lt;&#x2F;span&gt;&lt;span&gt;, grid.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;y&lt;&#x2F;span&gt;&lt;span&gt;), &lt;&#x2F;span&gt;&lt;span style=&quot;color:#d08770;&quot;&gt;1.0&lt;&#x2F;span&gt;&lt;span&gt;, &lt;&#x2F;span&gt;&lt;span style=&quot;color:#d08770;&quot;&gt;2.0&lt;&#x2F;span&gt;&lt;span&gt;) - &lt;&#x2F;span&gt;&lt;span style=&quot;color:#d08770;&quot;&gt;1.0&lt;&#x2F;span&gt;&lt;span&gt;);
+&lt;&#x2F;span&gt;&lt;span&gt;}
+&lt;&#x2F;span&gt;&lt;span&gt;
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;float &lt;&#x2F;span&gt;&lt;span style=&quot;color:#8fa1b3;&quot;&gt;getAxis&lt;&#x2F;span&gt;&lt;span&gt;(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;vec2 &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;uv&lt;&#x2F;span&gt;&lt;span&gt;, &lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;int &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;axis&lt;&#x2F;span&gt;&lt;span&gt;) {
+&lt;&#x2F;span&gt;&lt;span&gt;	&lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;float&lt;&#x2F;span&gt;&lt;span&gt; line = &lt;&#x2F;span&gt;&lt;span style=&quot;color:#96b5b4;&quot;&gt;abs&lt;&#x2F;span&gt;&lt;span&gt;(((uv[axis] + &lt;&#x2F;span&gt;&lt;span style=&quot;color:#d08770;&quot;&gt;0.5&lt;&#x2F;span&gt;&lt;span&gt;) - (uResolution[axis]&#x2F;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#d08770;&quot;&gt;2&lt;&#x2F;span&gt;&lt;span&gt;))&#x2F;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#d08770;&quot;&gt;4&lt;&#x2F;span&gt;&lt;span&gt;);
+&lt;&#x2F;span&gt;&lt;span&gt;	&lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;return &lt;&#x2F;span&gt;&lt;span style=&quot;color:#96b5b4;&quot;&gt;clamp&lt;&#x2F;span&gt;&lt;span&gt;(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#d08770;&quot;&gt;1.0 &lt;&#x2F;span&gt;&lt;span&gt;- line, &lt;&#x2F;span&gt;&lt;span style=&quot;color:#d08770;&quot;&gt;0.0&lt;&#x2F;span&gt;&lt;span&gt;, &lt;&#x2F;span&gt;&lt;span style=&quot;color:#d08770;&quot;&gt;1.0&lt;&#x2F;span&gt;&lt;span&gt;);
+&lt;&#x2F;span&gt;&lt;span&gt;}
+&lt;&#x2F;span&gt;&lt;span&gt;
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;void &lt;&#x2F;span&gt;&lt;span style=&quot;color:#8fa1b3;&quot;&gt;main&lt;&#x2F;span&gt;&lt;span&gt;() {	
+&lt;&#x2F;span&gt;&lt;span&gt;	&lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;float&lt;&#x2F;span&gt;&lt;span&gt; big = &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;getGrid&lt;&#x2F;span&gt;&lt;span&gt;(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;gl_FragCoord&lt;&#x2F;span&gt;&lt;span&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;xy&lt;&#x2F;span&gt;&lt;span&gt;, squareSize);
+&lt;&#x2F;span&gt;&lt;span&gt;	&lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;float&lt;&#x2F;span&gt;&lt;span&gt; small = &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;getGrid&lt;&#x2F;span&gt;&lt;span&gt;(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;gl_FragCoord&lt;&#x2F;span&gt;&lt;span&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;xy&lt;&#x2F;span&gt;&lt;span&gt;, smallSquareSize);
+&lt;&#x2F;span&gt;&lt;span&gt;	&lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;float&lt;&#x2F;span&gt;&lt;span&gt; xAxis = &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;getAxis&lt;&#x2F;span&gt;&lt;span&gt;(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;gl_FragCoord&lt;&#x2F;span&gt;&lt;span&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;xy&lt;&#x2F;span&gt;&lt;span&gt;, &lt;&#x2F;span&gt;&lt;span style=&quot;color:#d08770;&quot;&gt;1&lt;&#x2F;span&gt;&lt;span&gt;);
+&lt;&#x2F;span&gt;&lt;span&gt;	&lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;float&lt;&#x2F;span&gt;&lt;span&gt; yAxis = &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;getAxis&lt;&#x2F;span&gt;&lt;span&gt;(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;gl_FragCoord&lt;&#x2F;span&gt;&lt;span&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;xy&lt;&#x2F;span&gt;&lt;span&gt;, &lt;&#x2F;span&gt;&lt;span style=&quot;color:#d08770;&quot;&gt;0&lt;&#x2F;span&gt;&lt;span&gt;);
+&lt;&#x2F;span&gt;&lt;span&gt;
+&lt;&#x2F;span&gt;&lt;span&gt;	&lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;vec3&lt;&#x2F;span&gt;&lt;span&gt; axis = &lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;vec3&lt;&#x2F;span&gt;&lt;span&gt;(xAxis, yAxis, &lt;&#x2F;span&gt;&lt;span style=&quot;color:#d08770;&quot;&gt;0.0&lt;&#x2F;span&gt;&lt;span&gt;);
+&lt;&#x2F;span&gt;&lt;span&gt;	&lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;vec3&lt;&#x2F;span&gt;&lt;span&gt; grid = &lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;vec3&lt;&#x2F;span&gt;&lt;span&gt;(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#96b5b4;&quot;&gt;max&lt;&#x2F;span&gt;&lt;span&gt;(big &#x2F; &lt;&#x2F;span&gt;&lt;span style=&quot;color:#d08770;&quot;&gt;2&lt;&#x2F;span&gt;&lt;span&gt;, small &#x2F; &lt;&#x2F;span&gt;&lt;span style=&quot;color:#d08770;&quot;&gt;8&lt;&#x2F;span&gt;&lt;span&gt;));
+&lt;&#x2F;span&gt;&lt;span&gt;
+&lt;&#x2F;span&gt;&lt;span&gt;	&lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;vec3&lt;&#x2F;span&gt;&lt;span&gt; gridCol = &lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;vec3&lt;&#x2F;span&gt;&lt;span&gt;(grid);
+&lt;&#x2F;span&gt;&lt;span&gt;
+&lt;&#x2F;span&gt;&lt;span&gt;	&lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;float&lt;&#x2F;span&gt;&lt;span&gt; mask = &lt;&#x2F;span&gt;&lt;span style=&quot;color:#96b5b4;&quot;&gt;max&lt;&#x2F;span&gt;&lt;span&gt;(axis.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;x&lt;&#x2F;span&gt;&lt;span&gt;, axis.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;y&lt;&#x2F;span&gt;&lt;span&gt;);
+&lt;&#x2F;span&gt;&lt;span&gt;
+&lt;&#x2F;span&gt;&lt;span&gt;	outColor = &lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;vec4&lt;&#x2F;span&gt;&lt;span&gt;(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#96b5b4;&quot;&gt;mix&lt;&#x2F;span&gt;&lt;span&gt;(grid , axis, mask), &lt;&#x2F;span&gt;&lt;span style=&quot;color:#d08770;&quot;&gt;0.0&lt;&#x2F;span&gt;&lt;span&gt;);
+&lt;&#x2F;span&gt;&lt;span&gt;}
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;h2 id=&quot;implementing-on-flat-blend&quot;&gt;Implementing on flat-blend&lt;&#x2F;h2&gt;
+&lt;p&gt;Thanks to all of the refactoring I had done previously, adding in another render pass was pretty easy! Everything was pretty much a copy of the other render pass, besides using these vertices to cover the whole screen (and having nothing to do in the vertex shader).&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;rust&quot; style=&quot;background-color:#2b303b;color:#c0c5ce;&quot; class=&quot;language-rust &quot;&gt;&lt;code class=&quot;language-rust&quot; data-lang=&quot;rust&quot;&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;let&lt;&#x2F;span&gt;&lt;span&gt; grid_vertices: Vec&amp;lt;Vertex&amp;gt; = vec![
+&lt;&#x2F;span&gt;&lt;span&gt;    Vertex {
+&lt;&#x2F;span&gt;&lt;span&gt;        position: [-&lt;&#x2F;span&gt;&lt;span style=&quot;color:#d08770;&quot;&gt;1.0&lt;&#x2F;span&gt;&lt;span&gt;, -&lt;&#x2F;span&gt;&lt;span style=&quot;color:#d08770;&quot;&gt;1.0&lt;&#x2F;span&gt;&lt;span&gt;],
+&lt;&#x2F;span&gt;&lt;span&gt;    },
+&lt;&#x2F;span&gt;&lt;span&gt;    Vertex {
+&lt;&#x2F;span&gt;&lt;span&gt;        position: [&lt;&#x2F;span&gt;&lt;span style=&quot;color:#d08770;&quot;&gt;1.0&lt;&#x2F;span&gt;&lt;span&gt;, -&lt;&#x2F;span&gt;&lt;span style=&quot;color:#d08770;&quot;&gt;1.0&lt;&#x2F;span&gt;&lt;span&gt;],
+&lt;&#x2F;span&gt;&lt;span&gt;    },
+&lt;&#x2F;span&gt;&lt;span&gt;    Vertex {
+&lt;&#x2F;span&gt;&lt;span&gt;        position: [-&lt;&#x2F;span&gt;&lt;span style=&quot;color:#d08770;&quot;&gt;1.0&lt;&#x2F;span&gt;&lt;span&gt;, &lt;&#x2F;span&gt;&lt;span style=&quot;color:#d08770;&quot;&gt;1.0&lt;&#x2F;span&gt;&lt;span&gt;],
+&lt;&#x2F;span&gt;&lt;span&gt;    },
+&lt;&#x2F;span&gt;&lt;span&gt;    Vertex {
+&lt;&#x2F;span&gt;&lt;span&gt;        position: [&lt;&#x2F;span&gt;&lt;span style=&quot;color:#d08770;&quot;&gt;1.0&lt;&#x2F;span&gt;&lt;span&gt;, -&lt;&#x2F;span&gt;&lt;span style=&quot;color:#d08770;&quot;&gt;1.0&lt;&#x2F;span&gt;&lt;span&gt;],
+&lt;&#x2F;span&gt;&lt;span&gt;    },
+&lt;&#x2F;span&gt;&lt;span&gt;    Vertex {
+&lt;&#x2F;span&gt;&lt;span&gt;        position: [-&lt;&#x2F;span&gt;&lt;span style=&quot;color:#d08770;&quot;&gt;1.0&lt;&#x2F;span&gt;&lt;span&gt;, &lt;&#x2F;span&gt;&lt;span style=&quot;color:#d08770;&quot;&gt;1.0&lt;&#x2F;span&gt;&lt;span&gt;],
+&lt;&#x2F;span&gt;&lt;span&gt;    },
+&lt;&#x2F;span&gt;&lt;span&gt;    Vertex {
+&lt;&#x2F;span&gt;&lt;span&gt;        position: [&lt;&#x2F;span&gt;&lt;span style=&quot;color:#d08770;&quot;&gt;1.0&lt;&#x2F;span&gt;&lt;span&gt;, &lt;&#x2F;span&gt;&lt;span style=&quot;color:#d08770;&quot;&gt;1.0&lt;&#x2F;span&gt;&lt;span&gt;],
+&lt;&#x2F;span&gt;&lt;span&gt;    },
+&lt;&#x2F;span&gt;&lt;span&gt;];
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;The other render pass also had to be changed to write over the grid, but all that took was changing a value from &lt;code&gt;Clear&lt;&#x2F;code&gt; to &lt;code&gt;Load&lt;&#x2F;code&gt;.&lt;&#x2F;p&gt;
+&lt;p&gt;With these changes, we end up with our pink square on a grid 💃
+
+&lt;figure&gt;
+    &lt;img alt=&quot;The same grid as before, now with a pink square on it&quot; src=&quot;.&amp;#x2F;flat-blend.png&quot; width=&quot;100%&quot; style=&quot;&quot; &#x2F;&gt;
+    &lt;figcaption&gt;&lt;&#x2F;figcaption&gt;
+&lt;&#x2F;figure&gt;&lt;&#x2F;p&gt;
+&lt;p&gt;This reveals a few issues:&lt;&#x2F;p&gt;
+&lt;ol&gt;
+&lt;li&gt;The grid size doesn&#x27;t mean anything in comparison to the size of the square because the square is being scaled but the size of the grid is fixed.&lt;&#x2F;li&gt;
+&lt;li&gt;There&#x27;s no way to shift the position of the &amp;quot;camera&amp;quot; in relation to the grid or the square.&lt;&#x2F;li&gt;
+&lt;li&gt;The grid is also off centre anyway because I&#x27;ve not added a uniform to input the viewport resolution.&lt;&#x2F;li&gt;
+&lt;&#x2F;ol&gt;
+&lt;p&gt;These are all things that need to be addressed. But I think the first I want to take care of is the camera positioning, which means it&#x27;s time to start putting our meshes into &amp;quot;objects&amp;quot; 👻. That&#x27;s for another time though, this has already taken ages for me to figure out!&lt;&#x2F;p&gt;
+&lt;hr &#x2F;&gt;
+&lt;p&gt;&lt;code&gt;Movin&#x27; Out&lt;&#x2F;code&gt; by &lt;code&gt;Billy Joel&lt;&#x2F;code&gt; is today&#x27;s song. My spreadsheets tell my I&#x27;ll be able to afford a house by mid-2025, so I&#x27;ll have to wait a bit to share the feeling.&lt;&#x2F;p&gt;
+&lt;iframe style=&quot;border-radius:12px&quot; src=&quot;https:&amp;#x2F;&amp;#x2F;open.spotify.com&amp;#x2F;embed&amp;#x2F;track&amp;#x2F;16GUMo6u3D2qo9a19AkYct?utm_source=generator&quot; width=&quot;100%&quot; height=&quot;152&quot; frameBorder=&quot;0&quot; allowfullscreen=&quot;&quot;
+    allow=&quot;autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture&quot; loading=&quot;lazy&quot;&gt;&lt;&#x2F;iframe&gt;</content>
+	</entry>
+	<entry xml:lang="en">
+		<title>Renderdoc, Wireframes and Refactoring</title>
+		<published>2023-03-01T00:00:00+00:00</published>
+		<updated>2023-03-01T00:00:00+00:00</updated>
+		<link rel="alternate" href="https://zacxalot.github.io/flat-blend/7-renderdoc-and-wireframes/" type="text/html"/>
+		<id>https://zacxalot.github.io/flat-blend/7-renderdoc-and-wireframes/</id>
+		<content type="html">&lt;p&gt;Now that I&#x27;ve got my &lt;code&gt;BMesh&lt;&#x2F;code&gt; rendering, I think it would be nice to try and replicate some of the different viewport options Blender is capable of. More specifically, I&#x27;d like to implement a wireframe view.
+Before jumping straight to how it&#x27;s done in Blender, I&#x27;ve tried getting it going myself.&lt;&#x2F;p&gt;
+&lt;p&gt;With a little bit of Duckduckgo-ing, I bumped into this, &lt;a href=&quot;https:&#x2F;&#x2F;registry.khronos.org&#x2F;vulkan&#x2F;specs&#x2F;1.3-extensions&#x2F;man&#x2F;html&#x2F;VkPolygonMode.html&quot;&gt;Vulkan Polygon Mode&lt;&#x2F;a&gt;. By setting this value to &lt;code&gt;VK_POLYGON_MODE_LINE&lt;&#x2F;code&gt; in the pipeline, instead of rendering the whole surface of each triangle, only the edges are drawn. I found the value in the Vulkano docs &lt;a href=&quot;https:&#x2F;&#x2F;docs.rs&#x2F;vulkano&#x2F;latest&#x2F;vulkano&#x2F;pipeline&#x2F;graphics&#x2F;rasterization&#x2F;enum.PolygonMode.html&quot;&gt;here&lt;&#x2F;a&gt; and set it in my pipeline definition like so:&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;rust&quot; style=&quot;background-color:#2b303b;color:#c0c5ce;&quot; class=&quot;language-rust &quot;&gt;&lt;code class=&quot;language-rust&quot; data-lang=&quot;rust&quot;&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;let&lt;&#x2F;span&gt;&lt;span&gt; rasterization_state = RasterizationState {
+&lt;&#x2F;span&gt;&lt;span&gt;    cull_mode: StateMode::Fixed(CullMode::None),
+&lt;&#x2F;span&gt;&lt;span&gt;    polygon_mode: PolygonMode::Line,
+&lt;&#x2F;span&gt;&lt;span&gt;    ..Default::default()
+&lt;&#x2F;span&gt;&lt;span&gt;};
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;Running with this change presented this: 🥳&lt;&#x2F;p&gt;
+
+&lt;figure&gt;
+    &lt;img alt=&quot;A wireframe showing the triangles that make up the square&quot; src=&quot;.&amp;#x2F;wireframe.png&quot; width=&quot;100%&quot; style=&quot;&quot; &#x2F;&gt;
+    &lt;figcaption&gt;I wish everything I&amp;#x27;ve done so far on this project was this easy&lt;&#x2F;figcaption&gt;
+&lt;&#x2F;figure&gt;
+&lt;p&gt;You may notice a bit of an issue with this, however. Looking at the wireframe of the same mesh in Blender, it is only rendering the edges of BMesh, not the edges of the triangles.&lt;&#x2F;p&gt;
+
+&lt;figure&gt;
+    &lt;img alt=&quot;A wireframe showing the just the BMesh edges of a square in Blender&quot; src=&quot;.&amp;#x2F;blender-wireframe.png&quot; width=&quot;100%&quot; style=&quot;&quot; &#x2F;&gt;
+    &lt;figcaption&gt;&lt;&#x2F;figcaption&gt;
+&lt;&#x2F;figure&gt;
+&lt;p&gt;This is how we want it, because this is how the &lt;code&gt;BMesh&lt;&#x2F;code&gt; data is stored, and this is all the user cares about whilst interacting with it.&lt;&#x2F;p&gt;
+&lt;h2 id=&quot;renderdoc&quot;&gt;Renderdoc&lt;&#x2F;h2&gt;
+&lt;p&gt;Again, before looking at how Blender does it, I tried searching the internet some more but practically everything I could find was about using &lt;code&gt;VK_POLYGON_MODE_LINE&lt;&#x2F;code&gt;. So I gave in, and loaded up one of my favorite programs, &lt;a href=&quot;https:&#x2F;&#x2F;renderdoc.org&#x2F;&quot;&gt;Renderdoc&lt;&#x2F;a&gt;. If you&#x27;ve never come across it, Renderdoc is a graphics debugging tool that lets you see step by step how the GPU has processed a frame.&lt;&#x2F;p&gt;
+&lt;p&gt;Renderdoc has an overwhelming interface (looks like Java Swing but it&#x27;s probably Qt), but I&#x27;ve managed to find all of the information I&#x27;ve needed from it so far. Importantly, I spotted that the pipeline is using the primitive topology of &lt;code&gt;Line List&lt;&#x2F;code&gt;, which I didn&#x27;t even know existed! From here, I can also look at the shader code that produces the wireframe. I had a peek, and it seemed a bit overcomplicated for what I need, so I&#x27;ll stick with what I&#x27;ve got for now.&lt;&#x2F;p&gt;
+
+&lt;figure&gt;
+    &lt;img alt=&quot;Render doc showing the pipeline state&quot; src=&quot;.&amp;#x2F;renderdoc-1.png&quot; width=&quot;100%&quot; style=&quot;&quot; &#x2F;&gt;
+    &lt;figcaption&gt;&lt;&#x2F;figcaption&gt;
+&lt;&#x2F;figure&gt;
+&lt;p&gt;The input into the vertex shader in Renderdoc was just a list of vertices, paired up to make a line. To get a line list from my &lt;code&gt;BMesh&lt;&#x2F;code&gt;, I used Rust&#x27;s wonderful iterators to make cheeky function for it:&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;rust&quot; style=&quot;background-color:#2b303b;color:#c0c5ce;&quot; class=&quot;language-rust &quot;&gt;&lt;code class=&quot;language-rust&quot; data-lang=&quot;rust&quot;&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;pub fn &lt;&#x2F;span&gt;&lt;span style=&quot;color:#8fa1b3;&quot;&gt;bm_edge_list&lt;&#x2F;span&gt;&lt;span&gt;(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;bmesh&lt;&#x2F;span&gt;&lt;span&gt;: &amp;amp;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;mut&lt;&#x2F;span&gt;&lt;span&gt; BMesh) -&amp;gt; Vec&amp;lt;Vertex&amp;gt; {
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;unsafe &lt;&#x2F;span&gt;&lt;span&gt;{
+&lt;&#x2F;span&gt;&lt;span&gt;        bmesh
+&lt;&#x2F;span&gt;&lt;span&gt;            .edges
+&lt;&#x2F;span&gt;&lt;span&gt;            .&lt;&#x2F;span&gt;&lt;span style=&quot;color:#96b5b4;&quot;&gt;iter&lt;&#x2F;span&gt;&lt;span&gt;()
+&lt;&#x2F;span&gt;&lt;span&gt;            .&lt;&#x2F;span&gt;&lt;span style=&quot;color:#96b5b4;&quot;&gt;flat_map&lt;&#x2F;span&gt;&lt;span&gt;(|(_, &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;edge&lt;&#x2F;span&gt;&lt;span&gt;)| [(*edge.v0).vertex, (*edge.v1).vertex])
+&lt;&#x2F;span&gt;&lt;span&gt;            .collect::&amp;lt;Vec&amp;lt;Vertex&amp;gt;&amp;gt;()
+&lt;&#x2F;span&gt;&lt;span&gt;    }
+&lt;&#x2F;span&gt;&lt;span&gt;}
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;Then, by setting the topology mode to Line List, and passing in only the vertices we get this: 🥳&lt;&#x2F;p&gt;
+
+&lt;figure&gt;
+    &lt;img alt=&quot;A wireframe showing the just the BMesh edges of a square&quot; src=&quot;.&amp;#x2F;bmesh-wireframe.png&quot; width=&quot;100%&quot; style=&quot;&quot; &#x2F;&gt;
+    &lt;figcaption&gt;&lt;&#x2F;figcaption&gt;
+&lt;&#x2F;figure&gt;&lt;h2 id=&quot;refactoring&quot;&gt;Refactoring&lt;&#x2F;h2&gt;
+&lt;p&gt;By implementing the new wireframe display, I had to change the pipeline that renders our shapes to remove the input of indices. The &lt;code&gt;LineList&lt;&#x2F;code&gt; topology doesn&#x27;t accept these (Or maybe it does, and I&#x27;ve just not made use of them).
+So that has pushed me into doing some refactoring.
+I knew it was coming, the base code I was using from the &lt;a href=&quot;https:&#x2F;&#x2F;github.com&#x2F;vulkano-rs&#x2F;vulkano&#x2F;blob&#x2F;0.32.X&#x2F;examples&#x2F;src&#x2F;bin&#x2F;triangle-v1_3.rs&quot;&gt;Vulkano example triangle&lt;&#x2F;a&gt; was understandably designed around just drawing a triangle.
+But that&#x27;s just not going to cut it anymore!
+&#x27;
+I&#x27;ve probably done a terrible job of this, but without having written anything in Vulkan before, it&#x27;s fair to accept it won&#x27;t be even close to perfect on the first try.
+I&#x27;ve done two big things really.&lt;&#x2F;p&gt;
+&lt;p&gt;Firstly, I&#x27;ve moved all of the initialisation of Vulkan into its own initialisation function, which returns a &lt;code&gt;VulkanState&lt;&#x2F;code&gt;. This struct looks like this and will likely be subject to heavy change when I realise my refactoring is bad.&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;rust&quot; style=&quot;background-color:#2b303b;color:#c0c5ce;&quot; class=&quot;language-rust &quot;&gt;&lt;code class=&quot;language-rust&quot; data-lang=&quot;rust&quot;&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;pub struct &lt;&#x2F;span&gt;&lt;span&gt;VulkanState {
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;pub &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;device&lt;&#x2F;span&gt;&lt;span&gt;: Arc&amp;lt;Device&amp;gt;,
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;pub &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;surface&lt;&#x2F;span&gt;&lt;span&gt;: Arc&amp;lt;Surface&amp;gt;,
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;pub &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;descriptor_set_allocator&lt;&#x2F;span&gt;&lt;span&gt;: StandardDescriptorSetAllocator,
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;pub &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;command_buffer_allocator&lt;&#x2F;span&gt;&lt;span&gt;: StandardCommandBufferAllocator,
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;pub &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;recreate_swapchain&lt;&#x2F;span&gt;&lt;span&gt;: &lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;bool&lt;&#x2F;span&gt;&lt;span&gt;,
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;pub &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;previous_frame_end&lt;&#x2F;span&gt;&lt;span&gt;: Option&amp;lt;Box&amp;lt;dyn GpuFuture&amp;gt;&amp;gt;,
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;pub &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;queue&lt;&#x2F;span&gt;&lt;span&gt;: Arc&amp;lt;Queue&amp;gt;,
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;pub &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;vertex_buffers&lt;&#x2F;span&gt;&lt;span&gt;: VertexBuffers,
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;pub &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;index_buffers&lt;&#x2F;span&gt;&lt;span&gt;: IndexBuffers,
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;pub &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;shaders&lt;&#x2F;span&gt;&lt;span&gt;: Arc&amp;lt;LoadedShaders&amp;gt;,
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;pub &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;swapchain&lt;&#x2F;span&gt;&lt;span&gt;: Arc&amp;lt;Swapchain&amp;gt;,
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;pub &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;swapchain_images&lt;&#x2F;span&gt;&lt;span&gt;: Vec&amp;lt;Arc&amp;lt;SwapchainImage&amp;gt;&amp;gt;,
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;pub &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;viewport&lt;&#x2F;span&gt;&lt;span&gt;: Viewport,
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;pub &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;attachment_images&lt;&#x2F;span&gt;&lt;span&gt;: Arc&amp;lt;AttachmentImageMap&amp;gt;,
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;pub &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;memory_allocator&lt;&#x2F;span&gt;&lt;span&gt;: Arc&amp;lt;GenericMemoryAllocator&amp;lt;Arc&amp;lt;FreeListAllocator&amp;gt;&amp;gt;&amp;gt;,
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;pub &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;render_passes&lt;&#x2F;span&gt;&lt;span&gt;: Arc&amp;lt;RenderPasses&amp;gt;,
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;pub &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;pipelines&lt;&#x2F;span&gt;&lt;span&gt;: Arc&amp;lt;Pipelines&amp;gt;,
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;pub &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;frame_buffers&lt;&#x2F;span&gt;&lt;span&gt;: Arc&amp;lt;FrameBufferMap&amp;gt;,
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;pub &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;uniform_buffer&lt;&#x2F;span&gt;&lt;span&gt;: Arc&amp;lt;CpuBufferPool&amp;lt;Data&amp;gt;&amp;gt;,
+&lt;&#x2F;span&gt;&lt;span&gt;}
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;&lt;code&gt;Arc&lt;&#x2F;code&gt;&#x27;s for days!
+I think this is pretty cool though, instead of having to pass everything around individually we can now pass in an &lt;code&gt;Arc&lt;&#x2F;code&gt; to the &lt;code&gt;VulkanState&lt;&#x2F;code&gt; and let the function grab what it needs.&lt;&#x2F;p&gt;
+&lt;p&gt;The second thing I did was to move the creation of shaders, render passes, pipelines, frame buffers and attachment images into their own files and have loaders for each that return an &lt;a href=&quot;https:&#x2F;&#x2F;crates.io&#x2F;crates&#x2F;enum-map&quot;&gt;EnumMap&lt;&#x2F;a&gt; for each.
+This makes keeping track of what what each resource is tied to and for really easy.&lt;&#x2F;p&gt;
+&lt;p&gt;I also experimented with wrapping the values of the &lt;code&gt;EnumMap&lt;&#x2F;code&gt;&#x27;s with &lt;code&gt;Option&lt;&#x2F;code&gt; for the &lt;code&gt;VertexBuffers&lt;&#x2F;code&gt; and &lt;code&gt;IndexBuffers&lt;&#x2F;code&gt;.
+This is important for these buffers as making an empty vertex buffer is apparently very naughty (&lt;code&gt;&#x27;main&#x27; panicked at &#x27;assertion failed: size != 0&#x27;&lt;&#x2F;code&gt;), so unless we have some vertices ready for each of our vertex buffers when creating our Vulkan environment, we can&#x27;t make them.&lt;&#x2F;p&gt;
+&lt;p&gt;Here is the type definition and initialisation of the vertex buffers:&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;rust&quot; style=&quot;background-color:#2b303b;color:#c0c5ce;&quot; class=&quot;language-rust &quot;&gt;&lt;code class=&quot;language-rust&quot; data-lang=&quot;rust&quot;&gt;&lt;span style=&quot;color:#65737e;&quot;&gt;&#x2F;&#x2F; buffers.rs, terrible name
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;pub type &lt;&#x2F;span&gt;&lt;span&gt;VertexBuffers = EnumMap&amp;lt;VertexBufferKey, Option&amp;lt;Arc&amp;lt;CpuAccessibleBuffer&amp;lt;[Vertex]&amp;gt;&amp;gt;&amp;gt;&amp;gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#65737e;&quot;&gt;&#x2F;&#x2F;init.rs
+&lt;&#x2F;span&gt;&lt;span&gt;vertex_buffers: enum_map! {_ =&amp;gt; None}
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;And here is the render pass definition &lt;code&gt;EnumMap&lt;&#x2F;code&gt;. The rest of the &lt;code&gt;EnumMap&lt;&#x2F;code&gt;&#x27;s are similar to this.&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;rust&quot; style=&quot;background-color:#2b303b;color:#c0c5ce;&quot; class=&quot;language-rust &quot;&gt;&lt;code class=&quot;language-rust&quot; data-lang=&quot;rust&quot;&gt;&lt;span style=&quot;color:#65737e;&quot;&gt;&#x2F;&#x2F; render_pass_loader.rs
+&lt;&#x2F;span&gt;&lt;span&gt;#[&lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;derive&lt;&#x2F;span&gt;&lt;span&gt;(Enum)]
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;pub enum &lt;&#x2F;span&gt;&lt;span&gt;RenderPassKeys {
+&lt;&#x2F;span&gt;&lt;span&gt;    Solid,
+&lt;&#x2F;span&gt;&lt;span&gt;}
+&lt;&#x2F;span&gt;&lt;span&gt;
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;pub type &lt;&#x2F;span&gt;&lt;span&gt;RenderPasses = EnumMap&amp;lt;RenderPassKeys, Arc&amp;lt;RenderPass&amp;gt;&amp;gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;pub fn &lt;&#x2F;span&gt;&lt;span style=&quot;color:#8fa1b3;&quot;&gt;load_render_passes&lt;&#x2F;span&gt;&lt;span&gt;(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;device&lt;&#x2F;span&gt;&lt;span&gt;: Arc&amp;lt;Device&amp;gt;, &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;format&lt;&#x2F;span&gt;&lt;span&gt;: Format) -&amp;gt; Arc&amp;lt;RenderPasses&amp;gt; {
+&lt;&#x2F;span&gt;&lt;span&gt;    Arc::new(enum_map! {
+&lt;&#x2F;span&gt;&lt;span&gt;        RenderPassKeys::Solid =&amp;gt; &lt;&#x2F;span&gt;&lt;span style=&quot;color:#96b5b4;&quot;&gt;solid_draw_pass&lt;&#x2F;span&gt;&lt;span&gt;(device.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#96b5b4;&quot;&gt;clone&lt;&#x2F;span&gt;&lt;span&gt;(), format).&lt;&#x2F;span&gt;&lt;span style=&quot;color:#96b5b4;&quot;&gt;unwrap&lt;&#x2F;span&gt;&lt;span&gt;()
+&lt;&#x2F;span&gt;&lt;span&gt;    })
+&lt;&#x2F;span&gt;&lt;span&gt;}
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;To top it all off, I&#x27;ve cleared all of the warnings ⚠️🥳&lt;&#x2F;p&gt;
+&lt;p&gt;Doing all of this refactoring took hours and I&#x27;m glad it&#x27;s done for now. Plenty of room for progress now!&lt;&#x2F;p&gt;
+&lt;p&gt;Next up, a grid!&lt;&#x2F;p&gt;
+&lt;hr &#x2F;&gt;
+&lt;p&gt;I&#x27;m not all that into &lt;code&gt;Radiohead&lt;&#x2F;code&gt; but I like &lt;code&gt;Sit Down. Stand Up&lt;&#x2F;code&gt;, it&#x27;s just 3 minutes of buildup and then Thom Yorke expressing peak lyricism.
+&lt;iframe style=&quot;border-radius:12px&quot; src=&quot;https:&amp;#x2F;&amp;#x2F;open.spotify.com&amp;#x2F;embed&amp;#x2F;track&amp;#x2F;6MKWCO8g2W05UcaFyfQ6Cl?utm_source=generator&quot; width=&quot;100%&quot; height=&quot;152&quot; frameBorder=&quot;0&quot; allowfullscreen=&quot;&quot;
+    allow=&quot;autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture&quot; loading=&quot;lazy&quot;&gt;&lt;&#x2F;iframe&gt;&lt;&#x2F;p&gt;
+</content>
+	</entry>
+	<entry xml:lang="en">
+		<title>Rendering BMesh</title>
+		<published>2023-02-26T00:00:00+00:00</published>
+		<updated>2023-02-26T00:00:00+00:00</updated>
+		<link rel="alternate" href="https://zacxalot.github.io/flat-blend/6-bmesh-to-triangles/" type="text/html"/>
+		<id>https://zacxalot.github.io/flat-blend/6-bmesh-to-triangles/</id>
+		<content type="html">&lt;p&gt;Another short post from me this week. I&#x27;ve made some progress on getting &lt;code&gt;BMesh&lt;&#x2F;code&gt; converted into a list of vertices and triangles for Vulkan to eat up.&lt;&#x2F;p&gt;
+&lt;p&gt;Here is the function I&#x27;ve made for it.&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;rust&quot; style=&quot;background-color:#2b303b;color:#c0c5ce;&quot; class=&quot;language-rust &quot;&gt;&lt;code class=&quot;language-rust&quot; data-lang=&quot;rust&quot;&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;pub fn &lt;&#x2F;span&gt;&lt;span style=&quot;color:#8fa1b3;&quot;&gt;bm_triangulate&lt;&#x2F;span&gt;&lt;span&gt;(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;bmesh&lt;&#x2F;span&gt;&lt;span&gt;: &amp;amp;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;mut&lt;&#x2F;span&gt;&lt;span&gt; BMesh) -&amp;gt; (Vec&amp;lt;Vertex&amp;gt;, Vec&amp;lt;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;u32&lt;&#x2F;span&gt;&lt;span&gt;&amp;gt;) {
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;let mut&lt;&#x2F;span&gt;&lt;span&gt; all_bm_vertices: Vec&amp;lt;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;*mut&lt;&#x2F;span&gt;&lt;span&gt; BMVert&amp;gt; = vec![];
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;let mut&lt;&#x2F;span&gt;&lt;span&gt; all_indices: Vec&amp;lt;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;u32&lt;&#x2F;span&gt;&lt;span&gt;&amp;gt; = vec![];
+&lt;&#x2F;span&gt;&lt;span&gt;
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;for &lt;&#x2F;span&gt;&lt;span&gt;(_, face) in &amp;amp;bmesh.faces {
+&lt;&#x2F;span&gt;&lt;span&gt;        &lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;unsafe &lt;&#x2F;span&gt;&lt;span&gt;{
+&lt;&#x2F;span&gt;&lt;span&gt;            &lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;let&lt;&#x2F;span&gt;&lt;span&gt; vertices = BMLoopIterator::new(face.loop_start.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#96b5b4;&quot;&gt;unwrap&lt;&#x2F;span&gt;&lt;span&gt;())
+&lt;&#x2F;span&gt;&lt;span&gt;                .&lt;&#x2F;span&gt;&lt;span style=&quot;color:#96b5b4;&quot;&gt;map&lt;&#x2F;span&gt;&lt;span&gt;(|&lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;l&lt;&#x2F;span&gt;&lt;span&gt;| (*l).vertex)
+&lt;&#x2F;span&gt;&lt;span&gt;                .collect::&amp;lt;Vec&amp;lt;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;*mut&lt;&#x2F;span&gt;&lt;span&gt; BMVert&amp;gt;&amp;gt;();
+&lt;&#x2F;span&gt;&lt;span&gt;
+&lt;&#x2F;span&gt;&lt;span&gt;            &lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;let&lt;&#x2F;span&gt;&lt;span&gt; flattened_verts = vertices
+&lt;&#x2F;span&gt;&lt;span&gt;                .&lt;&#x2F;span&gt;&lt;span style=&quot;color:#96b5b4;&quot;&gt;iter&lt;&#x2F;span&gt;&lt;span&gt;()
+&lt;&#x2F;span&gt;&lt;span&gt;                .&lt;&#x2F;span&gt;&lt;span style=&quot;color:#96b5b4;&quot;&gt;flat_map&lt;&#x2F;span&gt;&lt;span&gt;(|&lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;v&lt;&#x2F;span&gt;&lt;span&gt;| (**v).vertex.position)
+&lt;&#x2F;span&gt;&lt;span&gt;                .collect::&amp;lt;Vec&amp;lt;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;f32&lt;&#x2F;span&gt;&lt;span&gt;&amp;gt;&amp;gt;();
+&lt;&#x2F;span&gt;&lt;span&gt;
+&lt;&#x2F;span&gt;&lt;span&gt;            &lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;let&lt;&#x2F;span&gt;&lt;span&gt; indices = earcutr::earcut(&amp;amp;flattened_verts, &amp;amp;[], &lt;&#x2F;span&gt;&lt;span style=&quot;color:#d08770;&quot;&gt;2&lt;&#x2F;span&gt;&lt;span&gt;).&lt;&#x2F;span&gt;&lt;span style=&quot;color:#96b5b4;&quot;&gt;unwrap&lt;&#x2F;span&gt;&lt;span&gt;();
+&lt;&#x2F;span&gt;&lt;span&gt;
+&lt;&#x2F;span&gt;&lt;span&gt;            &lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;for&lt;&#x2F;span&gt;&lt;span&gt; index in indices {
+&lt;&#x2F;span&gt;&lt;span&gt;                &lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;if let &lt;&#x2F;span&gt;&lt;span&gt;Some(position) = all_bm_vertices
+&lt;&#x2F;span&gt;&lt;span&gt;                    .&lt;&#x2F;span&gt;&lt;span style=&quot;color:#96b5b4;&quot;&gt;iter&lt;&#x2F;span&gt;&lt;span&gt;()
+&lt;&#x2F;span&gt;&lt;span&gt;                    .&lt;&#x2F;span&gt;&lt;span style=&quot;color:#96b5b4;&quot;&gt;position&lt;&#x2F;span&gt;&lt;span&gt;(|&lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;val&lt;&#x2F;span&gt;&lt;span&gt;| val == &amp;amp;vertices[index])
+&lt;&#x2F;span&gt;&lt;span&gt;                {
+&lt;&#x2F;span&gt;&lt;span&gt;                    all_indices.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#96b5b4;&quot;&gt;push&lt;&#x2F;span&gt;&lt;span&gt;(position as &lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;u32&lt;&#x2F;span&gt;&lt;span&gt;);
+&lt;&#x2F;span&gt;&lt;span&gt;                } &lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;else &lt;&#x2F;span&gt;&lt;span&gt;{
+&lt;&#x2F;span&gt;&lt;span&gt;                    all_bm_vertices.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#96b5b4;&quot;&gt;push&lt;&#x2F;span&gt;&lt;span&gt;(vertices[index]);
+&lt;&#x2F;span&gt;&lt;span&gt;                    all_indices.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#96b5b4;&quot;&gt;push&lt;&#x2F;span&gt;&lt;span&gt;((all_bm_vertices.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#96b5b4;&quot;&gt;len&lt;&#x2F;span&gt;&lt;span&gt;() - &lt;&#x2F;span&gt;&lt;span style=&quot;color:#d08770;&quot;&gt;1&lt;&#x2F;span&gt;&lt;span&gt;) as &lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;u32&lt;&#x2F;span&gt;&lt;span&gt;);
+&lt;&#x2F;span&gt;&lt;span&gt;                }
+&lt;&#x2F;span&gt;&lt;span&gt;            }
+&lt;&#x2F;span&gt;&lt;span&gt;        }
+&lt;&#x2F;span&gt;&lt;span&gt;    }
+&lt;&#x2F;span&gt;&lt;span&gt;
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;unsafe &lt;&#x2F;span&gt;&lt;span&gt;{
+&lt;&#x2F;span&gt;&lt;span&gt;        &lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;let&lt;&#x2F;span&gt;&lt;span&gt; all_vertices = all_bm_vertices
+&lt;&#x2F;span&gt;&lt;span&gt;            .&lt;&#x2F;span&gt;&lt;span style=&quot;color:#96b5b4;&quot;&gt;iter&lt;&#x2F;span&gt;&lt;span&gt;()
+&lt;&#x2F;span&gt;&lt;span&gt;            .&lt;&#x2F;span&gt;&lt;span style=&quot;color:#96b5b4;&quot;&gt;map&lt;&#x2F;span&gt;&lt;span&gt;(|&lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;v&lt;&#x2F;span&gt;&lt;span&gt;| (*(*v)).vertex)
+&lt;&#x2F;span&gt;&lt;span&gt;            .collect::&amp;lt;Vec&amp;lt;Vertex&amp;gt;&amp;gt;();
+&lt;&#x2F;span&gt;&lt;span&gt;        (all_vertices, all_indices)
+&lt;&#x2F;span&gt;&lt;span&gt;    }
+&lt;&#x2F;span&gt;&lt;span&gt;}
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;Per face (not always a triangle), it runs the ear cutting algorithm from the &lt;a href=&quot;https:&#x2F;&#x2F;crates.io&#x2F;crates&#x2F;earcutr&quot;&gt;earcutr&lt;&#x2F;a&gt;.
+It then combines the results of all of these into a &lt;code&gt;Vec&lt;&#x2F;code&gt; of &lt;code&gt;Vertex&lt;&#x2F;code&gt;&#x27;s and a &lt;code&gt;Vec&lt;&#x2F;code&gt; of indices.
+These can then be put directly into Vertex and Index buffers.&lt;&#x2F;p&gt;
+&lt;p&gt;I had a look through the Blender code to try and find out how they do it, but I couldn&#x27;t find it. I did however see on the &lt;a href=&quot;https:&#x2F;&#x2F;docs.blender.org&#x2F;manual&#x2F;en&#x2F;latest&#x2F;modeling&#x2F;modifiers&#x2F;generate&#x2F;triangulate.html&quot;&gt;triangulate modifier docs&lt;&#x2F;a&gt; that the clip method uses the ear clipping algorithm, which it mentions &amp;quot;gives similar results to the tessellation used for the viewport rendering&amp;quot;. Perfect!&lt;&#x2F;p&gt;
+&lt;p&gt;Thankfully the &lt;code&gt;earcutr&lt;&#x2F;code&gt; crate exists so I don&#x27;t have to re-invent any wheels, but I had a look around for how the algorithm works anyway. I found this very &lt;a href=&quot;https:&#x2F;&#x2F;www.personal.kent.edu&#x2F;~rmuhamma&#x2F;Compgeometry&#x2F;MyCG&#x2F;TwoEar&#x2F;two-ear.htm&quot;&gt;old but endearing website&lt;&#x2F;a&gt; which explains a bit, the &lt;a href=&quot;https:&#x2F;&#x2F;github.com&#x2F;donbright&#x2F;earcutr&quot;&gt;github repo for earcutr&lt;&#x2F;a&gt; which have some good explainations and fun ascii diagrams, and &lt;a href=&quot;https:&#x2F;&#x2F;twohiccups.github.io&#x2F;Ear-Clipping&#x2F;&quot;&gt;this page here&lt;&#x2F;a&gt; which provides a lovely visualisation of what&#x27;s going on. I&#x27;ll be honest, I&#x27;m still not 100% sure how it works, but it does, and that&#x27;s all I need.&lt;&#x2F;p&gt;
+&lt;p&gt;Here is the fruit of my labour, another square 🙃. I&#x27;ve changed the colours to be a little more on brand at least.
+
+&lt;figure&gt;
+    &lt;img alt=&quot;A pink square in a window&quot; src=&quot;.&amp;#x2F;screen.png&quot; width=&quot;100%&quot; style=&quot;&quot; &#x2F;&gt;
+    &lt;figcaption&gt;&lt;&#x2F;figcaption&gt;
+&lt;&#x2F;figure&gt;&lt;&#x2F;p&gt;
+&lt;h2 id=&quot;bmesh-in-motion&quot;&gt;BMesh in Motion&lt;&#x2F;h2&gt;
+&lt;p&gt;To make it feel like I&#x27;ve actually done something, I have made it so I can change the position of the bottom left vertex using the mouse.
+I&#x27;ve probably done this in a way that is a crime against Vulkan, but I can worry about a proper implementation later. Here it is:&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;rust&quot; style=&quot;background-color:#2b303b;color:#c0c5ce;&quot; class=&quot;language-rust &quot;&gt;&lt;code class=&quot;language-rust&quot; data-lang=&quot;rust&quot;&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;let&lt;&#x2F;span&gt;&lt;span&gt; window = surface.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#96b5b4;&quot;&gt;object&lt;&#x2F;span&gt;&lt;span&gt;().&lt;&#x2F;span&gt;&lt;span style=&quot;color:#96b5b4;&quot;&gt;unwrap&lt;&#x2F;span&gt;&lt;span&gt;().downcast_ref::&amp;lt;Window&amp;gt;().&lt;&#x2F;span&gt;&lt;span style=&quot;color:#96b5b4;&quot;&gt;unwrap&lt;&#x2F;span&gt;&lt;span&gt;();
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;let&lt;&#x2F;span&gt;&lt;span&gt; width = window.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#96b5b4;&quot;&gt;inner_size&lt;&#x2F;span&gt;&lt;span&gt;().width as &lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;f64&lt;&#x2F;span&gt;&lt;span&gt;;
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;let&lt;&#x2F;span&gt;&lt;span&gt; height = window.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#96b5b4;&quot;&gt;inner_size&lt;&#x2F;span&gt;&lt;span&gt;().height as &lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;f64&lt;&#x2F;span&gt;&lt;span&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;let&lt;&#x2F;span&gt;&lt;span&gt; rel_x = &lt;&#x2F;span&gt;&lt;span style=&quot;color:#d08770;&quot;&gt;6.0 &lt;&#x2F;span&gt;&lt;span&gt;* ((position.x &#x2F; width) * &lt;&#x2F;span&gt;&lt;span style=&quot;color:#d08770;&quot;&gt;2.0 &lt;&#x2F;span&gt;&lt;span&gt;- &lt;&#x2F;span&gt;&lt;span style=&quot;color:#d08770;&quot;&gt;1.0&lt;&#x2F;span&gt;&lt;span&gt;);
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;let&lt;&#x2F;span&gt;&lt;span&gt; rel_y = &lt;&#x2F;span&gt;&lt;span style=&quot;color:#d08770;&quot;&gt;6.0 &lt;&#x2F;span&gt;&lt;span&gt;* (&lt;&#x2F;span&gt;&lt;span style=&quot;color:#d08770;&quot;&gt;1.0 &lt;&#x2F;span&gt;&lt;span&gt;- (position.y &#x2F; height) * &lt;&#x2F;span&gt;&lt;span style=&quot;color:#d08770;&quot;&gt;2.0&lt;&#x2F;span&gt;&lt;span&gt;);
+&lt;&#x2F;span&gt;&lt;span&gt;
+&lt;&#x2F;span&gt;&lt;span&gt;square_mesh
+&lt;&#x2F;span&gt;&lt;span&gt;    .vertices
+&lt;&#x2F;span&gt;&lt;span&gt;    .&lt;&#x2F;span&gt;&lt;span style=&quot;color:#96b5b4;&quot;&gt;iter_mut&lt;&#x2F;span&gt;&lt;span&gt;()
+&lt;&#x2F;span&gt;&lt;span&gt;    .&lt;&#x2F;span&gt;&lt;span style=&quot;color:#96b5b4;&quot;&gt;next&lt;&#x2F;span&gt;&lt;span&gt;()
+&lt;&#x2F;span&gt;&lt;span&gt;    .&lt;&#x2F;span&gt;&lt;span style=&quot;color:#96b5b4;&quot;&gt;unwrap&lt;&#x2F;span&gt;&lt;span&gt;()
+&lt;&#x2F;span&gt;&lt;span&gt;    .&lt;&#x2F;span&gt;&lt;span style=&quot;color:#d08770;&quot;&gt;1
+&lt;&#x2F;span&gt;&lt;span&gt;    .vertex
+&lt;&#x2F;span&gt;&lt;span&gt;    .position = [rel_x as &lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;f32&lt;&#x2F;span&gt;&lt;span&gt;, rel_y as &lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;f32&lt;&#x2F;span&gt;&lt;span&gt;];
+&lt;&#x2F;span&gt;&lt;span&gt;
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;let &lt;&#x2F;span&gt;&lt;span&gt;(vertices, indices) = &lt;&#x2F;span&gt;&lt;span style=&quot;color:#96b5b4;&quot;&gt;bm_triangulate&lt;&#x2F;span&gt;&lt;span&gt;(&amp;amp;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;mut&lt;&#x2F;span&gt;&lt;span&gt; square_mesh);
+&lt;&#x2F;span&gt;&lt;span&gt;
+&lt;&#x2F;span&gt;&lt;span&gt;vertex_buffer = CpuAccessibleBuffer::from_iter(
+&lt;&#x2F;span&gt;&lt;span&gt;    &amp;amp;memory_allocator,
+&lt;&#x2F;span&gt;&lt;span&gt;    BufferUsage {
+&lt;&#x2F;span&gt;&lt;span&gt;        vertex_buffer: &lt;&#x2F;span&gt;&lt;span style=&quot;color:#d08770;&quot;&gt;true&lt;&#x2F;span&gt;&lt;span&gt;,
+&lt;&#x2F;span&gt;&lt;span&gt;        ..BufferUsage::empty()
+&lt;&#x2F;span&gt;&lt;span&gt;    },
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#d08770;&quot;&gt;false&lt;&#x2F;span&gt;&lt;span&gt;,
+&lt;&#x2F;span&gt;&lt;span&gt;    vertices,
+&lt;&#x2F;span&gt;&lt;span&gt;)
+&lt;&#x2F;span&gt;&lt;span&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#96b5b4;&quot;&gt;unwrap&lt;&#x2F;span&gt;&lt;span&gt;();
+&lt;&#x2F;span&gt;&lt;span&gt;
+&lt;&#x2F;span&gt;&lt;span&gt;index_buffer = CpuAccessibleBuffer::from_iter(
+&lt;&#x2F;span&gt;&lt;span&gt;    &amp;amp;memory_allocator,
+&lt;&#x2F;span&gt;&lt;span&gt;    BufferUsage {
+&lt;&#x2F;span&gt;&lt;span&gt;        index_buffer: &lt;&#x2F;span&gt;&lt;span style=&quot;color:#d08770;&quot;&gt;true&lt;&#x2F;span&gt;&lt;span&gt;,
+&lt;&#x2F;span&gt;&lt;span&gt;        ..BufferUsage::empty()
+&lt;&#x2F;span&gt;&lt;span&gt;    },
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#d08770;&quot;&gt;false&lt;&#x2F;span&gt;&lt;span&gt;,
+&lt;&#x2F;span&gt;&lt;span&gt;    indices,
+&lt;&#x2F;span&gt;&lt;span&gt;)
+&lt;&#x2F;span&gt;&lt;span&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#96b5b4;&quot;&gt;unwrap&lt;&#x2F;span&gt;&lt;span&gt;();
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;Got some magic numbers in there (6.0) to scale it to be almost right 🤮.&lt;&#x2F;p&gt;
+&lt;p&gt;This at least gave me a chance to look at the &lt;a href=&quot;https:&#x2F;&#x2F;crates.io&#x2F;crates&#x2F;winit&quot;&gt;winit&lt;&#x2F;a&gt; crate&#x27;s event handling. It&#x27;s pretty cool!
+Everything is in Enums so it&#x27;s really nice to work with. Getting the position of the cursor after it&#x27;s been moved is as simple as this:&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;rust&quot; style=&quot;background-color:#2b303b;color:#c0c5ce;&quot; class=&quot;language-rust &quot;&gt;&lt;code class=&quot;language-rust&quot; data-lang=&quot;rust&quot;&gt;&lt;span&gt;Event::WindowEvent {
+&lt;&#x2F;span&gt;&lt;span&gt;    event: WindowEvent::CursorMoved { position, .. },
+&lt;&#x2F;span&gt;&lt;span&gt;    ..
+&lt;&#x2F;span&gt;&lt;span&gt;} =&amp;gt; {
+&lt;&#x2F;span&gt;&lt;span&gt;    println!(&amp;quot;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#d08770;&quot;&gt;{:?}&lt;&#x2F;span&gt;&lt;span&gt;&amp;quot;, position)
+&lt;&#x2F;span&gt;&lt;span&gt;}
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;That&#x27;s all for now, here&#x27;s a short video of the moving vertex 👀.
+
+&lt;video width=&quot;100%&quot; alt=&quot;A pink square in a window with it&amp;#x27;s bottom left vertex moving&quot; autoplay loop&gt;
+
+    &lt;source src=&quot;.&amp;#x2F;video.webm&quot; type=&quot;video&#x2F;mp4&quot;&gt;
+
+&lt;&#x2F;video&gt;&lt;&#x2F;p&gt;
+&lt;hr &#x2F;&gt;
+&lt;p&gt;I&#x27;ve been really getting into &lt;code&gt;Faith No More&lt;&#x2F;code&gt; recently. &lt;code&gt;Falling To Pieces&lt;&#x2F;code&gt; is one of my favourites. If you don&#x27;t like this, listen to anything else off &lt;code&gt;The Real Thing&lt;&#x2F;code&gt;, there&#x27;s some top stuff in there.
+&lt;iframe style=&quot;border-radius:12px&quot; src=&quot;https:&amp;#x2F;&amp;#x2F;open.spotify.com&amp;#x2F;embed&amp;#x2F;track&amp;#x2F;20nb0Wl1yqoEERbUSILuG1?utm_source=generator&quot; width=&quot;100%&quot; height=&quot;152&quot; frameBorder=&quot;0&quot; allowfullscreen=&quot;&quot;
+    allow=&quot;autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture&quot; loading=&quot;lazy&quot;&gt;&lt;&#x2F;iframe&gt;&lt;&#x2F;p&gt;
+</content>
+	</entry>
+</feed>

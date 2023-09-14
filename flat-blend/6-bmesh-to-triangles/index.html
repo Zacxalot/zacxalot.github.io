@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+      <meta http-equiv="X-UA-Compatible" content="IE=edge">
+      <meta http-equiv="content-type" content="text/html; charset=utf-8">
+      <meta name="google-site-verification" content="S_D6XT0jzn6m38pioQTiMnY2HFPuJUc3wtdV3CRtBEk" />
+      <script data-goatcounter="https://zacxalot.goatcounter.com/count"
+        async src="//gc.zgo.at/count.js"></script>
+
+      <!-- Enable responsiveness on mobile devices-->
+      <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1">
+
+      <title></title>
+
+      
+        <link rel="alternate" type="application/atom+xml" title="RSS" href="https://zacxalot.github.io/atom.xml">
+      
+
+      
+          <link rel="stylesheet" href="https://zacxalot.github.io/site.css">
+      
+
+      
+      
+    </head>
+
+    <body class="hack dark main container">
+        
+    
+        
+                
+                    <header>
+                        <nav itemscope itemtype="http://schema.org/SiteNavigationElement">
+                        
+                            <a itemprop="url"
+                               class=""
+                               href="https:&#x2F;&#x2F;zacxalot.github.io">
+                                <span itemprop="name">Home</span></a>
+                        
+                            <a itemprop="url"
+                               class=""
+                               href="https:&#x2F;&#x2F;zacxalot.github.io&#x2F;categories">
+                                <span itemprop="name">Categories</span></a>
+                        
+                            <a itemprop="url"
+                               class=""
+                               href="https:&#x2F;&#x2F;zacxalot.github.io&#x2F;tags">
+                                <span itemprop="name">Tags</span></a>
+                        
+                            <a itemprop="url"
+                               class=""
+                               href="https:&#x2F;&#x2F;github.com&#x2F;Zacxalot">
+                                <span itemprop="name">GitHub</span></a>
+                        
+                            <a itemprop="url"
+                               class=""
+                               href="https:&#x2F;&#x2F;www.linkedin.com&#x2F;in&#x2F;s-gregson&#x2F;">
+                                <span itemprop="name">LinkedIn</span></a>
+                        
+                        </nav>
+                    </header>
+                
+            
+    
+
+<article itemscope itemtype="http://schema.org/BlogPosting">
+    <header>
+        <h1 itemprop="headline">Rendering BMesh</h1>
+        <span class="muted">
+<svg style="margin-bottom:-3px" class="i-clock" viewBox="0 0 32 32" width="16" height="16" fill="none"
+    stroke="currentcolor" stroke-linecap="round" stroke-linejoin="round" stroke-width="6.25%">
+    <circle cx="16" cy="16" r="14" />
+    <path d="M16 8 L16 16 20 20" />
+</svg>
+<span>4 minute read</span>
+<svg style="margin-bottom: -3px" class="i-edit" viewBox="0 0 32 32" width="16" height="16" fill="none"
+    stroke="currentcolor" stroke-linecap="round" stroke-linejoin="round" stroke-width="6.25%">
+    <path d="M30 7 L25 2 5 22 3 29 10 27 Z M21 6 L26 11 Z M5 22 L10 27 Z" />
+</svg>
+
+Published: 2023-02-26
+</span>
+    </header>
+    <div itemprop="articleBody">
+      <p>Another short post from me this week. I've made some progress on getting <code>BMesh</code> converted into a list of vertices and triangles for Vulkan to eat up.</p>
+<p>Here is the function I've made for it.</p>
+<pre data-lang="rust" style="background-color:#2b303b;color:#c0c5ce;" class="language-rust "><code class="language-rust" data-lang="rust"><span style="color:#b48ead;">pub fn </span><span style="color:#8fa1b3;">bm_triangulate</span><span>(</span><span style="color:#bf616a;">bmesh</span><span>: &amp;</span><span style="color:#b48ead;">mut</span><span> BMesh) -&gt; (Vec&lt;Vertex&gt;, Vec&lt;</span><span style="color:#b48ead;">u32</span><span>&gt;) {
+</span><span>    </span><span style="color:#b48ead;">let mut</span><span> all_bm_vertices: Vec&lt;</span><span style="color:#b48ead;">*mut</span><span> BMVert&gt; = vec![];
+</span><span>    </span><span style="color:#b48ead;">let mut</span><span> all_indices: Vec&lt;</span><span style="color:#b48ead;">u32</span><span>&gt; = vec![];
+</span><span>
+</span><span>    </span><span style="color:#b48ead;">for </span><span>(_, face) in &amp;bmesh.faces {
+</span><span>        </span><span style="color:#b48ead;">unsafe </span><span>{
+</span><span>            </span><span style="color:#b48ead;">let</span><span> vertices = BMLoopIterator::new(face.loop_start.</span><span style="color:#96b5b4;">unwrap</span><span>())
+</span><span>                .</span><span style="color:#96b5b4;">map</span><span>(|</span><span style="color:#bf616a;">l</span><span>| (*l).vertex)
+</span><span>                .collect::&lt;Vec&lt;</span><span style="color:#b48ead;">*mut</span><span> BMVert&gt;&gt;();
+</span><span>
+</span><span>            </span><span style="color:#b48ead;">let</span><span> flattened_verts = vertices
+</span><span>                .</span><span style="color:#96b5b4;">iter</span><span>()
+</span><span>                .</span><span style="color:#96b5b4;">flat_map</span><span>(|</span><span style="color:#bf616a;">v</span><span>| (**v).vertex.position)
+</span><span>                .collect::&lt;Vec&lt;</span><span style="color:#b48ead;">f32</span><span>&gt;&gt;();
+</span><span>
+</span><span>            </span><span style="color:#b48ead;">let</span><span> indices = earcutr::earcut(&amp;flattened_verts, &amp;[], </span><span style="color:#d08770;">2</span><span>).</span><span style="color:#96b5b4;">unwrap</span><span>();
+</span><span>
+</span><span>            </span><span style="color:#b48ead;">for</span><span> index in indices {
+</span><span>                </span><span style="color:#b48ead;">if let </span><span>Some(position) = all_bm_vertices
+</span><span>                    .</span><span style="color:#96b5b4;">iter</span><span>()
+</span><span>                    .</span><span style="color:#96b5b4;">position</span><span>(|</span><span style="color:#bf616a;">val</span><span>| val == &amp;vertices[index])
+</span><span>                {
+</span><span>                    all_indices.</span><span style="color:#96b5b4;">push</span><span>(position as </span><span style="color:#b48ead;">u32</span><span>);
+</span><span>                } </span><span style="color:#b48ead;">else </span><span>{
+</span><span>                    all_bm_vertices.</span><span style="color:#96b5b4;">push</span><span>(vertices[index]);
+</span><span>                    all_indices.</span><span style="color:#96b5b4;">push</span><span>((all_bm_vertices.</span><span style="color:#96b5b4;">len</span><span>() - </span><span style="color:#d08770;">1</span><span>) as </span><span style="color:#b48ead;">u32</span><span>);
+</span><span>                }
+</span><span>            }
+</span><span>        }
+</span><span>    }
+</span><span>
+</span><span>    </span><span style="color:#b48ead;">unsafe </span><span>{
+</span><span>        </span><span style="color:#b48ead;">let</span><span> all_vertices = all_bm_vertices
+</span><span>            .</span><span style="color:#96b5b4;">iter</span><span>()
+</span><span>            .</span><span style="color:#96b5b4;">map</span><span>(|</span><span style="color:#bf616a;">v</span><span>| (*(*v)).vertex)
+</span><span>            .collect::&lt;Vec&lt;Vertex&gt;&gt;();
+</span><span>        (all_vertices, all_indices)
+</span><span>    }
+</span><span>}
+</span></code></pre>
+<p>Per face (not always a triangle), it runs the ear cutting algorithm from the <a href="https://crates.io/crates/earcutr">earcutr</a>.
+It then combines the results of all of these into a <code>Vec</code> of <code>Vertex</code>'s and a <code>Vec</code> of indices.
+These can then be put directly into Vertex and Index buffers.</p>
+<p>I had a look through the Blender code to try and find out how they do it, but I couldn't find it. I did however see on the <a href="https://docs.blender.org/manual/en/latest/modeling/modifiers/generate/triangulate.html">triangulate modifier docs</a> that the clip method uses the ear clipping algorithm, which it mentions &quot;gives similar results to the tessellation used for the viewport rendering&quot;. Perfect!</p>
+<p>Thankfully the <code>earcutr</code> crate exists so I don't have to re-invent any wheels, but I had a look around for how the algorithm works anyway. I found this very <a href="https://www.personal.kent.edu/~rmuhamma/Compgeometry/MyCG/TwoEar/two-ear.htm">old but endearing website</a> which explains a bit, the <a href="https://github.com/donbright/earcutr">github repo for earcutr</a> which have some good explainations and fun ascii diagrams, and <a href="https://twohiccups.github.io/Ear-Clipping/">this page here</a> which provides a lovely visualisation of what's going on. I'll be honest, I'm still not 100% sure how it works, but it does, and that's all I need.</p>
+<p>Here is the fruit of my labour, another square 🙃. I've changed the colours to be a little more on brand at least.
+
+<figure>
+    <img alt="A pink square in a window" src=".&#x2F;screen.png" width="100%" style="" />
+    <figcaption></figcaption>
+</figure></p>
+<h2 id="bmesh-in-motion">BMesh in Motion</h2>
+<p>To make it feel like I've actually done something, I have made it so I can change the position of the bottom left vertex using the mouse.
+I've probably done this in a way that is a crime against Vulkan, but I can worry about a proper implementation later. Here it is:</p>
+<pre data-lang="rust" style="background-color:#2b303b;color:#c0c5ce;" class="language-rust "><code class="language-rust" data-lang="rust"><span style="color:#b48ead;">let</span><span> window = surface.</span><span style="color:#96b5b4;">object</span><span>().</span><span style="color:#96b5b4;">unwrap</span><span>().downcast_ref::&lt;Window&gt;().</span><span style="color:#96b5b4;">unwrap</span><span>();
+</span><span style="color:#b48ead;">let</span><span> width = window.</span><span style="color:#96b5b4;">inner_size</span><span>().width as </span><span style="color:#b48ead;">f64</span><span>;
+</span><span style="color:#b48ead;">let</span><span> height = window.</span><span style="color:#96b5b4;">inner_size</span><span>().height as </span><span style="color:#b48ead;">f64</span><span>;
+</span><span>
+</span><span style="color:#b48ead;">let</span><span> rel_x = </span><span style="color:#d08770;">6.0 </span><span>* ((position.x / width) * </span><span style="color:#d08770;">2.0 </span><span>- </span><span style="color:#d08770;">1.0</span><span>);
+</span><span style="color:#b48ead;">let</span><span> rel_y = </span><span style="color:#d08770;">6.0 </span><span>* (</span><span style="color:#d08770;">1.0 </span><span>- (position.y / height) * </span><span style="color:#d08770;">2.0</span><span>);
+</span><span>
+</span><span>square_mesh
+</span><span>    .vertices
+</span><span>    .</span><span style="color:#96b5b4;">iter_mut</span><span>()
+</span><span>    .</span><span style="color:#96b5b4;">next</span><span>()
+</span><span>    .</span><span style="color:#96b5b4;">unwrap</span><span>()
+</span><span>    .</span><span style="color:#d08770;">1
+</span><span>    .vertex
+</span><span>    .position = [rel_x as </span><span style="color:#b48ead;">f32</span><span>, rel_y as </span><span style="color:#b48ead;">f32</span><span>];
+</span><span>
+</span><span style="color:#b48ead;">let </span><span>(vertices, indices) = </span><span style="color:#96b5b4;">bm_triangulate</span><span>(&amp;</span><span style="color:#b48ead;">mut</span><span> square_mesh);
+</span><span>
+</span><span>vertex_buffer = CpuAccessibleBuffer::from_iter(
+</span><span>    &amp;memory_allocator,
+</span><span>    BufferUsage {
+</span><span>        vertex_buffer: </span><span style="color:#d08770;">true</span><span>,
+</span><span>        ..BufferUsage::empty()
+</span><span>    },
+</span><span>    </span><span style="color:#d08770;">false</span><span>,
+</span><span>    vertices,
+</span><span>)
+</span><span>.</span><span style="color:#96b5b4;">unwrap</span><span>();
+</span><span>
+</span><span>index_buffer = CpuAccessibleBuffer::from_iter(
+</span><span>    &amp;memory_allocator,
+</span><span>    BufferUsage {
+</span><span>        index_buffer: </span><span style="color:#d08770;">true</span><span>,
+</span><span>        ..BufferUsage::empty()
+</span><span>    },
+</span><span>    </span><span style="color:#d08770;">false</span><span>,
+</span><span>    indices,
+</span><span>)
+</span><span>.</span><span style="color:#96b5b4;">unwrap</span><span>();
+</span></code></pre>
+<p>Got some magic numbers in there (6.0) to scale it to be almost right 🤮.</p>
+<p>This at least gave me a chance to look at the <a href="https://crates.io/crates/winit">winit</a> crate's event handling. It's pretty cool!
+Everything is in Enums so it's really nice to work with. Getting the position of the cursor after it's been moved is as simple as this:</p>
+<pre data-lang="rust" style="background-color:#2b303b;color:#c0c5ce;" class="language-rust "><code class="language-rust" data-lang="rust"><span>Event::WindowEvent {
+</span><span>    event: WindowEvent::CursorMoved { position, .. },
+</span><span>    ..
+</span><span>} =&gt; {
+</span><span>    println!(&quot;</span><span style="color:#d08770;">{:?}</span><span>&quot;, position)
+</span><span>}
+</span></code></pre>
+<p>That's all for now, here's a short video of the moving vertex 👀.
+
+<video width="100%" alt="A pink square in a window with it&#x27;s bottom left vertex moving" autoplay loop>
+
+    <source src=".&#x2F;video.webm" type="video/mp4">
+
+</video></p>
+<hr />
+<p>I've been really getting into <code>Faith No More</code> recently. <code>Falling To Pieces</code> is one of my favourites. If you don't like this, listen to anything else off <code>The Real Thing</code>, there's some top stuff in there.
+<iframe style="border-radius:12px" src="https:&#x2F;&#x2F;open.spotify.com&#x2F;embed&#x2F;track&#x2F;20nb0Wl1yqoEERbUSILuG1?utm_source=generator" width="100%" height="152" frameBorder="0" allowfullscreen=""
+    allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" loading="lazy"></iframe></p>
+
+    </div>
+
+    
+        <footer>
+            <hr>
+            <p>
+                
+                    Published by Samuel Gregson
+                
+                
+                    
+                    in <a href="https://zacxalot.github.io/categories/flat-blend/">Flat-Blend</a>
+                
+                
+                    and
+                    tagged
+                    
+                        <a href="https://zacxalot.github.io/tags/rust/">rust</a>
+                        
+                            
+                                
+                                    ,
+                                
+                            
+                        
+                    
+                        <a href="https://zacxalot.github.io/tags/bmesh/">bmesh</a>
+                        
+                            
+                                
+                                    ,
+                                
+                            
+                        
+                    
+                        <a href="https://zacxalot.github.io/tags/blender/">blender</a>
+                        
+                            
+                                
+                                    and
+                                
+                            
+                        
+                    
+                        <a href="https://zacxalot.github.io/tags/vulkan/">vulkan</a>
+                        
+                            
+                        
+                    
+                
+            </p>
+            
+            
+        </footer>
+    
+</article>
+
+
+    </body>
+
+</html>

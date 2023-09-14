@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+      <meta http-equiv="X-UA-Compatible" content="IE=edge">
+      <meta http-equiv="content-type" content="text/html; charset=utf-8">
+      <meta name="google-site-verification" content="S_D6XT0jzn6m38pioQTiMnY2HFPuJUc3wtdV3CRtBEk" />
+      <script data-goatcounter="https://zacxalot.goatcounter.com/count"
+        async src="//gc.zgo.at/count.js"></script>
+
+      <!-- Enable responsiveness on mobile devices-->
+      <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1">
+
+      <title></title>
+
+      
+        <link rel="alternate" type="application/atom+xml" title="RSS" href="https://zacxalot.github.io/atom.xml">
+      
+
+      
+          <link rel="stylesheet" href="https://zacxalot.github.io/site.css">
+      
+
+      
+      
+    </head>
+
+    <body class="hack dark main container">
+        
+    
+        
+                
+                    <header>
+                        <nav itemscope itemtype="http://schema.org/SiteNavigationElement">
+                        
+                            <a itemprop="url"
+                               class=""
+                               href="https:&#x2F;&#x2F;zacxalot.github.io">
+                                <span itemprop="name">Home</span></a>
+                        
+                            <a itemprop="url"
+                               class=""
+                               href="https:&#x2F;&#x2F;zacxalot.github.io&#x2F;categories">
+                                <span itemprop="name">Categories</span></a>
+                        
+                            <a itemprop="url"
+                               class=""
+                               href="https:&#x2F;&#x2F;zacxalot.github.io&#x2F;tags">
+                                <span itemprop="name">Tags</span></a>
+                        
+                            <a itemprop="url"
+                               class=""
+                               href="https:&#x2F;&#x2F;github.com&#x2F;Zacxalot">
+                                <span itemprop="name">GitHub</span></a>
+                        
+                            <a itemprop="url"
+                               class=""
+                               href="https:&#x2F;&#x2F;www.linkedin.com&#x2F;in&#x2F;s-gregson&#x2F;">
+                                <span itemprop="name">LinkedIn</span></a>
+                        
+                        </nav>
+                    </header>
+                
+            
+    
+
+<article itemscope itemtype="http://schema.org/BlogPosting">
+    <header>
+        <h1 itemprop="headline">Slab to the rescue!</h1>
+        <span class="muted">
+<svg style="margin-bottom:-3px" class="i-clock" viewBox="0 0 32 32" width="16" height="16" fill="none"
+    stroke="currentcolor" stroke-linecap="round" stroke-linejoin="round" stroke-width="6.25%">
+    <circle cx="16" cy="16" r="14" />
+    <path d="M16 8 L16 16 20 20" />
+</svg>
+<span>4 minute read</span>
+<svg style="margin-bottom: -3px" class="i-edit" viewBox="0 0 32 32" width="16" height="16" fill="none"
+    stroke="currentcolor" stroke-linecap="round" stroke-linejoin="round" stroke-width="6.25%">
+    <path d="M30 7 L25 2 5 22 3 29 10 27 Z M21 6 L26 11 Z M5 22 L10 27 Z" />
+</svg>
+
+Published: 2023-02-14
+</span>
+    </header>
+    <div itemprop="articleBody">
+      <p>I'm back onto my flat-blend project and have continued implementing <code>BMesh</code> in Rust.
+There's some stuff I'm still yet to understand the purpose of, <code>PhantomData</code> being a big one, but there's also quite a bit I think I've got right, for now.</p>
+<p>I've gotten rid of all of the <code>ManuallyDrop</code> wrappers, which I had a feeling were the wrong thing to be using at the time I was writing them but I knew no better. Instead I'm using an allocator called <a href="https://crates.io/crates/slab">Slab</a>. With this you can create data of a single type, have raw pointers to the data without it moving and destroy the data when you're done with it.</p>
+<p>So now my <code>BMesh</code> struct actually has ownership of the verts, edges, faces and loops, which is the way I think it should have been from the start.</p>
+<pre data-lang="rust" style="background-color:#2b303b;color:#c0c5ce;" class="language-rust "><code class="language-rust" data-lang="rust"><span style="color:#b48ead;">pub struct </span><span>BMesh {
+</span><span>    </span><span style="color:#b48ead;">pub </span><span style="color:#bf616a;">vertices</span><span>: Slab&lt;BMVert&gt;,
+</span><span>    </span><span style="color:#b48ead;">pub </span><span style="color:#bf616a;">edges</span><span>: Slab&lt;BMEdge&gt;,
+</span><span>    </span><span style="color:#b48ead;">pub </span><span style="color:#bf616a;">loops</span><span>: Slab&lt;BMLoop&gt;,
+</span><span>    </span><span style="color:#b48ead;">pub </span><span style="color:#bf616a;">faces</span><span>: Slab&lt;BMFace&gt;,
+</span><span>}
+</span></code></pre>
+<p>Here's how we create and kill verts now too.</p>
+<pre data-lang="rust" style="background-color:#2b303b;color:#c0c5ce;" class="language-rust "><code class="language-rust" data-lang="rust"><span style="color:#b48ead;">pub fn </span><span style="color:#8fa1b3;">bm_vert_create</span><span>(</span><span style="color:#bf616a;">bmesh</span><span>: &amp;</span><span style="color:#b48ead;">mut</span><span> BMesh) -&gt; </span><span style="color:#b48ead;">*mut</span><span> BMVert {
+</span><span>    </span><span style="color:#b48ead;">let</span><span> v_index = bmesh.vertices.</span><span style="color:#96b5b4;">insert</span><span>(BMVert::from((</span><span style="color:#d08770;">0.0</span><span>, </span><span style="color:#d08770;">0.0</span><span>)));
+</span><span>    </span><span style="color:#b48ead;">let</span><span> v = bmesh.vertices.</span><span style="color:#96b5b4;">get_mut</span><span>(v_index).</span><span style="color:#96b5b4;">unwrap</span><span>();
+</span><span>    v.slab_index = v_index;
+</span><span>
+</span><span>    v
+</span><span>}
+</span><span>
+</span><span style="color:#b48ead;">pub fn </span><span style="color:#8fa1b3;">bm_vert_kill</span><span>(</span><span style="color:#bf616a;">bmesh</span><span>: &amp;</span><span style="color:#b48ead;">mut</span><span> BMesh, </span><span style="color:#bf616a;">vert</span><span>: </span><span style="color:#b48ead;">*mut</span><span> BMVert) {
+</span><span>    </span><span style="color:#b48ead;">unsafe </span><span>{
+</span><span>        </span><span style="color:#b48ead;">while let </span><span>Some(edge) = (*vert).edge {
+</span><span>            </span><span style="color:#96b5b4;">bm_edge_kill</span><span>(bmesh, edge);
+</span><span>        }
+</span><span>
+</span><span>        </span><span style="color:#96b5b4;">bm_kill_only_vert</span><span>(bmesh, vert);
+</span><span>    }
+</span><span>}
+</span><span>
+</span><span style="color:#b48ead;">pub fn </span><span style="color:#8fa1b3;">bm_kill_only_vert</span><span>(</span><span style="color:#bf616a;">bmesh</span><span>: &amp;</span><span style="color:#b48ead;">mut</span><span> BMesh, </span><span style="color:#bf616a;">vert</span><span>: </span><span style="color:#b48ead;">*mut</span><span> BMVert) {
+</span><span>    </span><span style="color:#b48ead;">unsafe </span><span>{
+</span><span>        bmesh.vertices.</span><span style="color:#96b5b4;">remove</span><span>((*vert).slab_index);
+</span><span>    }
+</span><span>}
+</span></code></pre>
+<p>There's a couple of awkward things you might notice here. When creating a vert we insert it, but right after we get it out as mut to add its index to itself. This feels a bit icky to me but it's the only solution I could think of. Slab doesn't allow you to remove objects based on their raw pointer, which is the way I would have preferred. You'll also notice inside <code>bm_kill_only_vert</code>, I've had to wrap the dereference in brackets to be able to get <code>slab_index</code> out, this is kind of ugly to me but I think it's the only way.</p>
+<p>Before settling on Slab, I did have a look around at some arena allocators. The two I tried out were <a href="https://crates.io/crates/typed-arena">typed-arena</a> and <a href="https://crates.io/crates/generational-arena">generational-arena</a>. Typed-arena seems really cool, apparently very quick allocation, but the killer for me was that it doesn't allow the deletion of individual objects. If I understand this correctly, it would mean every mesh being edited would be a very slow memory leak. That might be a bit dramatic, I'm sure there would be ways of managing this behaviour so it isn't a problem.</p>
+<p>Generational-arena seemed a bit more fitting to what I need. It allows the removal of objects and hands out <code>Index</code> objects which gives you a safe way of accessing the data you have inserted (Would also be a solution to my <code>slab_index</code> gripe). <code>Index</code> is quite annoying to work with though, having to have everything return a <code>Result</code> and use <code>arena.get_mut(vert_0)?</code> all the time rather than <code>(*vert_0)</code> would start to frustrate me after a while. If I was making BMesh from scratch, I think it would make sense to use <code>Result</code>'s, but I know the C++ implementation works, so I might as well take the performance benefit of raw pointers and keep rolling with it.</p>
+<h2 id="faces-and-loops">Faces and loops</h2>
+<p>Besides switching to Slab, I have also implemented the create and kill functions for <code>BMFace</code> and <code>BMLoop</code> as well as the <code>disk link</code> creation for <code>BMEdge</code>. I'm getting into the swing of translating from C++ to Rust now so this didn't take too long. It also helps that my Slabs seem similar to memory pools in Blender, so there's even less for me to think about.</p>
+<h2 id="euler-operators">Euler Operators</h2>
+<p>If you look at the <a href="https://wiki.blender.org/wiki/Source/Modeling/BMesh/Design">BMesh design page</a> it has a list of the Euler operators that the higher level mesh editing functions use to do everything. So far, I've implemented these 6:</p>
+<ul>
+<li>bm_vert_create/kill</li>
+<li>bm_edge_create/kill</li>
+<li>bm_face_create/kill</li>
+</ul>
+<p>There are a few more left to implement that the page lists as</p>
+<ul>
+<li>bmesh_kernel_split_edge_make_vert/join_edge_kill_vert</li>
+<li>bmesh_kernel_split_face_make_edge/join_face_kill_edge: Split Face, Make Edge and Join Face, Kill Edge</li>
+<li>bmesh_loop_reverse: Reverse the loop of a BMFace. Its own inverse</li>
+</ul>
+<p>Before I jump in and implement these though, I'd like to bring things back to flat-blend and try to render an mesh made with BMesh. So, I need to have another dive into the Blender source code to try and find where/how it turns these BMesh's (and n-gons 😬) into something a GPU can consume. </p>
+<hr />
+<p>I listened to this album some time last year, great all round but this track is my favourite off it. Gets bonus points for having a wireframe sphere on the art.
+<iframe style="border-radius:12px" src="https:&#x2F;&#x2F;open.spotify.com&#x2F;embed&#x2F;track&#x2F;5XMJHuIuP9L8j2NEiEWRla?utm_source=generator" width="100%" height="152" frameBorder="0" allowfullscreen=""
+    allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" loading="lazy"></iframe></p>
+
+    </div>
+
+    
+        <footer>
+            <hr>
+            <p>
+                
+                    Published by Samuel Gregson
+                
+                
+                    
+                    in <a href="https://zacxalot.github.io/categories/flat-blend/">Flat-Blend</a>
+                
+                
+                    and
+                    tagged
+                    
+                        <a href="https://zacxalot.github.io/tags/rust/">rust</a>
+                        
+                            
+                                
+                                    ,
+                                
+                            
+                        
+                    
+                        <a href="https://zacxalot.github.io/tags/bmesh/">bmesh</a>
+                        
+                            
+                                
+                                    and
+                                
+                            
+                        
+                    
+                        <a href="https://zacxalot.github.io/tags/blender/">blender</a>
+                        
+                            
+                        
+                    
+                
+            </p>
+            
+            
+        </footer>
+    
+</article>
+
+
+    </body>
+
+</html>
