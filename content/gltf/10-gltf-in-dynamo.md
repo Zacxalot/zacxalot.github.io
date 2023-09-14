@@ -1,6 +1,6 @@
 +++
 title = "Putting GLTF into DynamoDB"
-date = "2023-07-17"
+date = "2023-09-14"
 transparent = true
 
 [taxonomies]
