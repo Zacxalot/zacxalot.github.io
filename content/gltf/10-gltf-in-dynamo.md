@@ -8,6 +8,8 @@ categories = ["DynamoDB", "GLTF"]
 tags = ["dynamodb","typescript","gltf","3d"]
 +++
 
+<img src="header.png" style="display: none"/>
+
 Since finding out GLTF was just glorified JSON, I've been curious about what storing it in DynamoDB would be like and if it was possible.
 
 ## GLTF Transform!
